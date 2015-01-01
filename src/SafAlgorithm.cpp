@@ -33,11 +33,15 @@ void SafAlgorithm::detailedInitialize()
 
 void SafAlgorithm::detailedExecute()
 {
-	auto start = std::chrono::high_resolution_clock::now();
+	struct timeval  tv1, tv2;
+	gettimeofday(&tv1, NULL);
+	/* Program code to execute here */
+	
 	execute();
 	m_event++;
-	auto elapsed = std::chrono::high_resolution_clock::now() - start;
-	m_totalTime += std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
+	
+	gettimeofday(&tv2, NULL);
+	m_totalTime += (double) (tv2.tv_usec - tv1.tv_usec) +  (double) (tv2.tv_sec - tv1.tv_sec);
 }
 
 
