@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-c -Wall `root-config --cflags --libs`
+CFLAGS=-c -Wall `root-config --cflags --libs` --std=c++11 -Ofast
 ODIR=obj
 #LDFLAGS=
 SOURCES=Saffron.cpp src/SafRunner.cpp src/SafDataSet.cpp src/SafGeometry.cpp \

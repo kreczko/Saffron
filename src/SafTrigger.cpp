@@ -15,7 +15,9 @@ SafTrigger::SafTrigger(SafRunner * runner) :
   m_triggerWindowSizeA(16),
   m_triggerWindowSizeB(8),
   m_triggerWindowSizeC(8),
-  m_triggerValueCut(60)
+  m_triggerValueCut(60),
+  m_nThreadsPerGlib(2),
+  m_threading(true)
 {
 	m_triggerWindowSizeTotal = m_triggerWindowSizeA + m_triggerWindowSizeB
 			+ m_triggerWindowSizeC;
@@ -38,14 +40,57 @@ void SafTrigger::initialize()
 
 //_____________________________________________________________________________
 
+void SafTrigger::scanChannels(unsigned int iGlib, unsigned int iLow, unsigned int iUp)
+{
+	unsigned int nChannels = runner()->geometry()->nChannels();
+	for (unsigned int i=iLow; i<std::min(iUp, runner()->geometry()->nChannels()); i++) {
+		scanChannel(runner()->rawData()->channel(iGlib, i));
+	}
+}
+
+
+//_____________________________________________________________________________
+
+void SafTrigger::scanGlib(unsigned int iGlib)
+{
+	unsigned int nChannels = runner()->geometry()->nChannels();
+	int step = nChannels/m_nThreadsPerGlib;
+	std::vector<std::thread> threads;
+	for (unsigned int i=0; i<nChannels; i+=step) {
+		threads.push_back(std::thread(&SafTrigger::scanChannels, this, iGlib, i, i+step));
+	}
+	
+	for (std::vector<std::thread>::iterator i = threads.begin(); 
+			i!=threads.end(); i++) {
+		(*i).join();
+	}
+}
+
+
+//_____________________________________________________________________________
+
 void SafTrigger::execute()
 {
 	unsigned int nGlibs = runner()->geometry()->nGlibs();
 	unsigned int nChannels = runner()->geometry()->nChannels();
-
-	for (unsigned int i=0; i<nGlibs; i++) {
-		for (unsigned int j=0; j<nChannels; j++) {
-			scan(runner()->rawData()->channel(i, j));
+	
+	if (m_threading) {
+		std::vector<std::thread> threads;
+		for (unsigned int i=0; i<nGlibs; i++) {
+			threads.push_back(std::thread(&SafTrigger::scanGlib, this, i));
+		}
+		
+		for (std::vector<std::thread>::iterator i = threads.begin(); 
+				i!=threads.end(); i++) {
+			(*i).join();
+		}
+	}
+	
+	else {
+		for (unsigned int i=0; i<nGlibs; i++) {
+			for (unsigned int j=0; j<nChannels; j++) {
+				scanChannel(runner()->rawData()->channel(i, j));
+			}
 		}
 	}
 }
@@ -53,7 +98,7 @@ void SafTrigger::execute()
 
 //_____________________________________________________________________________
 
-void SafTrigger::scan(SafRawDataChannel * channel)
+void SafTrigger::scanChannel(SafRawDataChannel * channel)
 {
 	unsigned int nTriggers = 0;
 	std::vector<int> * times = channel->times();
@@ -68,7 +113,7 @@ void SafTrigger::scan(SafRawDataChannel * channel)
 			channel->triggerValues()->push_back(triggerValue);
 			nTriggers++;
 		}
-		plot(triggerValue, "AllTriggerValues", "AllTriggerValues", 500, -1000, 10000);
+		//plot(triggerValue, "AllTriggerValues", "AllTriggerValues", 500, -1000, 10000);
 	}
 
 	channel->setNTriggers(channel->triggerTimes()->size());

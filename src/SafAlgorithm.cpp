@@ -35,13 +35,14 @@ void SafAlgorithm::detailedExecute()
 {
 	struct timeval  tv1, tv2;
 	gettimeofday(&tv1, NULL);
-	/* Program code to execute here */
 	
 	execute();
 	m_event++;
 	
 	gettimeofday(&tv2, NULL);
-	m_totalTime += (double) (tv2.tv_usec - tv1.tv_usec) +  (double) (tv2.tv_sec - tv1.tv_sec);
+	double timeElapsed = (unsigned long long) (tv2.tv_usec - tv1.tv_usec) 
+			+ (unsigned long long) ((tv2.tv_sec - tv1.tv_sec)*1000000ULL);
+	m_totalTime += timeElapsed;
 }
 
 

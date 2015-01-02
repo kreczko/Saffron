@@ -31,7 +31,7 @@ private:
   std::vector< TH1F* > h_th1sSLOW; // Slow performance.
 	std::vector< TH2F* > h_th2sSLOW; // Slow performance.
 	unsigned int m_event;
-	long long m_totalTime;
+	unsigned long long m_totalTime;
 
 
 public:

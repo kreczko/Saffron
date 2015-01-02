@@ -11,6 +11,7 @@
 #include "SafAlgorithm.h"
 #include "SafRunner.h"
 #include "SafRawDataChannel.h"
+#include <thread>
 
 class SafRawDataChannel;
 
@@ -23,6 +24,8 @@ private:
   unsigned int m_triggerWindowSizeB;
   unsigned int m_triggerWindowSizeC;
   double m_triggerValueCut;
+  unsigned int m_nThreadsPerGlib;
+  bool m_threading;
 
 
 public:
@@ -34,7 +37,9 @@ public:
 	void execute();
 	void finalize();
 
-	void scan(SafRawDataChannel * channel);
+	void scanChannel(SafRawDataChannel * channel);
+	void scanGlib(unsigned int iGlib);
+	void scanChannels(unsigned int iGlib, unsigned int iLow, unsigned int iUp);
 	double evalTimeWindow(std::vector<double> * signals,
 		std::vector<int> * times, unsigned int i);
 };
