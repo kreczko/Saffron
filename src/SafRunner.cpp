@@ -28,7 +28,7 @@ SafRunner::SafRunner() :
 	m_geometry = new SafGeometry();
 
 	// Options.
-	m_nEvents = 5;
+	m_nEvents = 15;
 	m_runMode = 1; // 0 for MC, 1 for real data.
 
 	// Save file.
@@ -79,6 +79,14 @@ void SafRunner::run()
 
 	for (ialgo = m_algorithms.begin(); ialgo != m_algorithms.end(); ialgo++)
 		(*ialgo)->detailedFinalize();
+	
+	double totTime = 0;
+	std::cout<<"\n--------- Algorithm Average Execute Time (us) ---------"<<std::endl;
+	for (ialgo = m_algorithms.begin(); ialgo != m_algorithms.end(); ialgo++) {
+		std::cout<<(*ialgo)->name()<<"\t\t"<<(*ialgo)->AvTime()<<std::endl;
+		totTime += (*ialgo)->AvTime();
+	}
+	std::cout<<"\nTotal Time: \t\t"<<totTime<<std::endl;
 }
 
 

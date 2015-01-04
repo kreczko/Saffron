@@ -15,9 +15,11 @@ SafTrigger::SafTrigger(SafRunner * runner) :
   m_triggerWindowSizeA(16),
   m_triggerWindowSizeB(8),
   m_triggerWindowSizeC(8),
-  m_triggerValueCut(60),
-  m_nThreadsPerGlib(2),
-  m_threading(true)
+  m_triggerValueCut(350),
+  m_nThreadsPerGlib(4),
+  m_threading(true),
+  m_nTriggers(0),
+  m_caching(false)
 {
 	m_triggerWindowSizeTotal = m_triggerWindowSizeA + m_triggerWindowSizeB
 			+ m_triggerWindowSizeC;
@@ -93,6 +95,11 @@ void SafTrigger::execute()
 			}
 		}
 	}
+	for (unsigned int i=0; i<nGlibs; i++) {
+	  for (unsigned int j=0; j<nChannels; j++) {
+			m_nTriggers += runner()->rawData()->channel(i, j)->nTriggers();
+	  }
+	}
 }
 
 
@@ -105,16 +112,30 @@ void SafTrigger::scanChannel(SafRawDataChannel * channel)
 	std::vector<double> * signals = channel->signals();
 	if (times->size() <= m_triggerWindowSizeTotal) return;
 
-
+	
+	bool firstTimeEval = true;
 	for (unsigned int i=0; i<times->size() - m_triggerWindowSizeTotal; i++) {
-		double triggerValue = evalTimeWindow(signals, times, i);
+		// Temporary variables used to retrieve info from eval method. Also used 
+		// for caching.
+		double triggerValue;
+		double triggerDipValue;
+		double triggerPeakValue;
+		double triggerBaseLine;
+		
+		evalTimeWindow(signals, times, i, &triggerValue, &triggerDipValue, 
+				&triggerPeakValue, &triggerBaseLine, &firstTimeEval);
+		
 		if (triggerValue > m_triggerValueCut) {
 			channel->triggerTimes()->push_back(times->at(i));
 			channel->triggerValues()->push_back(triggerValue);
+			channel->triggerDipValues()->push_back(triggerDipValue);
+			channel->triggerPeakValues()->push_back(triggerPeakValue);
+			channel->triggerBaseLines()->push_back(triggerBaseLine);
 			nTriggers++;
+			i += m_triggerWindowSizeB;
 		}
-		//plot(triggerValue, "AllTriggerValues", "AllTriggerValues", 500, -1000, 10000);
 	}
+	
 
 	channel->setNTriggers(channel->triggerTimes()->size());
 }
@@ -122,55 +143,71 @@ void SafTrigger::scanChannel(SafRawDataChannel * channel)
 
 //_____________________________________________________________________________
 
-double SafTrigger::evalTimeWindow(std::vector<double> * signals,
-		std::vector<int> * times, unsigned int iStart)
+void SafTrigger::evalTimeWindow(std::vector<double> * signals,
+		std::vector<int> * times, unsigned int iStart, double * triggerValue, 
+		double * triggerDipValue, double * triggerPeakValue, double * triggerBaseLine,
+		bool * firstTimeEval)
 {
-	double value;
-	double baseLineSum = 0.0;
-	double peakSum = 0.0;
-	double dipSum = 0.0;
-
-	unsigned int nBaseLinePresent = 0;
-	unsigned int nPeakPresent = 0;
-	unsigned int nDipPresent = 0;
-
-	unsigned int i;
-	int currentTime = times->at(iStart);
-
-	for (i=0; i<m_triggerWindowSizeA; i++) {
-    if (currentTime == times->at(iStart+i)) {
-    	nBaseLinePresent++;
-    	baseLineSum += signals->at(iStart+i);
-    }
-    currentTime++;
+	// Cannot handle zero surpression in this version.
+	// First eval case for this channel, and/or no caching cases.
+	double baseLine = 0.0;
+	double peakBit = 0.0;
+	double dipBit = 0.0;
+	
+	
+	if (*firstTimeEval || !m_caching) {
+		unsigned int i;
+		for (i = iStart; i<iStart + m_triggerWindowSizeA; i++)
+			baseLine += signals->at(i);
+		baseLine /= (1.*m_triggerWindowSizeA);
+	
+	
+		for (; i<iStart + m_triggerWindowSizeA + m_triggerWindowSizeB; i++)
+			peakBit += signals->at(i) - baseLine;
+		peakBit /= (1.*m_triggerWindowSizeB);
+	
+	
+		for (; i<iStart + m_triggerWindowSizeTotal; i++)
+			dipBit += signals->at(i) - baseLine;
+		dipBit /= (1.*m_triggerWindowSizeC);
+		
+		
+		(*triggerValue) = peakBit - dipBit;;
+		(*triggerDipValue) = dipBit;
+		(*triggerPeakValue) = peakBit;
+		(*triggerBaseLine) = baseLine;
+		(*firstTimeEval) = false;
 	}
-	baseLineSum /= (1.0*nBaseLinePresent);
-
-
-	for (i=0; i<m_triggerWindowSizeB; i++) {
-		int iWindow = iStart+i+m_triggerWindowSizeA;
-    if (currentTime == times->at(iWindow)) {
-    	nPeakPresent++;
-    	peakSum += signals->at(iWindow);
-    }
-    currentTime++;
+	
+	
+	// Otherwise, fancy stuff with caching.
+	else {
+		// Broken.
+		unsigned int triggerWindowSizeAB = m_triggerWindowSizeA + m_triggerWindowSizeB;
+		(*triggerPeakValue) += (*triggerBaseLine);
+		(*triggerDipValue) += (*triggerBaseLine);
+		
+		(*triggerPeakValue) *= (1.*m_triggerWindowSizeB);
+		(*triggerDipValue) *= (1.*m_triggerWindowSizeC);
+		
+		
+		(*triggerBaseLine) -= signals->at(iStart - 1)/(1.*m_triggerWindowSizeA);
+		(*triggerBaseLine) += signals->at(iStart + m_triggerWindowSizeA - 1)/(1.*m_triggerWindowSizeA);
+		
+		(*triggerPeakValue) -= signals->at(iStart + m_triggerWindowSizeA - 1);
+		(*triggerPeakValue) += signals->at(iStart + triggerWindowSizeAB - 1);
+		
+		(*triggerDipValue) -= signals->at(iStart + triggerWindowSizeAB - 1);
+		(*triggerDipValue) += signals->at(iStart + m_triggerWindowSizeTotal - 1);
+		
+		(*triggerPeakValue) -= (*triggerBaseLine);
+		(*triggerDipValue) -= (*triggerBaseLine);
+		
+		(*triggerPeakValue) /= (1.*m_triggerWindowSizeB);
+		(*triggerDipValue) /= (1.*m_triggerWindowSizeC);
+		
+		(*triggerValue) = (*triggerPeakValue) - (*triggerDipValue);
 	}
-	peakSum /= (1.0*nPeakPresent);
-
-
-	for (i=0; i<m_triggerWindowSizeC; i++) {
-		int iWindow = iStart+i+m_triggerWindowSizeA + m_triggerWindowSizeB;
-    if (currentTime == times->at(iWindow)) {
-    	nDipPresent++;
-    	dipSum += signals->at(iWindow);
-    }
-    currentTime++;
-	}
-	dipSum /= (1.0*nDipPresent);
-
-	value = (peakSum - baseLineSum) - (dipSum - baseLineSum);
-	//std::cout<<value<<std::endl;
-	return value;
 }
 
 
@@ -179,6 +216,7 @@ double SafTrigger::evalTimeWindow(std::vector<double> * signals,
 
 void SafTrigger::finalize()
 {
+	std::cout<<"nTriggers:\t"<<m_nTriggers<<std::endl;
 }
 
 

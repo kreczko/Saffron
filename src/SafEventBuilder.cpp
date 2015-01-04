@@ -83,7 +83,7 @@ void SafEventBuilder::realData()
 		for (unsigned int i=0; i<waveform->size(); i++) {
 			channel->signals()->push_back(waveform->at(i));
 			channel->times()->push_back(i);
-			plot(channel->signals()->at(i), "AllSignals", "AllSignals", 500, 7000, 9000);
+			//plot(channel->signals()->at(i), "AllSignals", "AllSignals", 500, 7000, 9000);
 		}
 		channel->setNEntries(channel->times()->size());
 	}

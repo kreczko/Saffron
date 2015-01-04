@@ -26,6 +26,7 @@ private:
 	TH2F* h_allSignals;
 	TH1F* h_signalMeans;
 	TH1F* h_signalWidths;
+	bool m_threading;
 
 
 public:
@@ -37,7 +38,7 @@ public:
 	void execute();
 	void finalize();
 
-	void fill();
+	void fill(int threadID);
 };
 
 #endif /* SAFRAWPLOTS_H_ */

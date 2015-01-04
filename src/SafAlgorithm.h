@@ -15,7 +15,7 @@
 #include "TH2F.h"
 #include <sstream>
 #include <sys/time.h>
-
+#include <mutex>
 
 // Forward declarations.
 class SafRunner;
@@ -32,6 +32,8 @@ private:
 	std::vector< TH2F* > h_th2sSLOW; // Slow performance.
 	unsigned int m_event;
 	unsigned long long m_totalTime;
+	double m_avTime;
+	std::mutex m_mtx;
 
 
 public:
@@ -64,6 +66,8 @@ public:
 	std::string name() {return m_childClassName;}
 	bool eof() {return m_eof;}
 	SafRunner * runner() {return m_runner;}
+	unsigned int event() {return m_event;}
+	double AvTime() {return m_avTime;}
 };
 
 #endif /* SAFALGORITHM_H_ */

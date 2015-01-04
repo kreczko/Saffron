@@ -19,6 +19,12 @@ private:
 
 	std::vector<TH1F*> h_firstEventPeaks;
 	std::vector<TH1F*> h_triggerValues;
+	TH1F * h_dipValues;
+	TH1F * h_peakValues;
+	TH1F * h_allTriggerValues;
+	TH2F * h_dipVsPeakValues;
+	TH2F * h_dipVsTriggerValues;
+	TH2F * h_peakVsTriggerValues;
 
 public:
   // Methods __________________________________________________________________

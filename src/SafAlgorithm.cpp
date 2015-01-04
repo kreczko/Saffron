@@ -12,6 +12,7 @@
 SafAlgorithm::SafAlgorithm(SafRunner * runner, std::string name) :
   m_eof(false)
 {
+	std::mutex m_mtx;
   m_runner = runner;
   m_childClassName = name;
   m_event = 0;
@@ -42,7 +43,7 @@ void SafAlgorithm::detailedExecute()
 	gettimeofday(&tv2, NULL);
 	double timeElapsed = (unsigned long long) (tv2.tv_usec - tv1.tv_usec) 
 			+ (unsigned long long) ((tv2.tv_sec - tv1.tv_sec)*1000000ULL);
-	m_totalTime += timeElapsed;
+	if (m_event > 1) m_totalTime += timeElapsed;
 }
 
 
@@ -51,13 +52,7 @@ void SafAlgorithm::detailedExecute()
 void SafAlgorithm::detailedFinalize()
 {
 	finalize();
-
-	double averageTime = m_totalTime/(1000.*m_event);
-	std::stringstream ss;
-	ss<<averageTime;
-	//std::cout<<m_totalTime<<std::endl;
-	std::cout<<m_childClassName + "\t\t Average time (us): " + ss.str()<<std::endl;
-
+	m_avTime = m_totalTime/(1000.*(m_event-1));
 
   // Save plots.
 	for (std::vector<TH1F*>::iterator iPlot = h_th1sSLOW.begin();

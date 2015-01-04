@@ -37,6 +37,9 @@ void SafRawDataChannel::clear()
 	signals()->clear();
 	triggerTimes()->clear();
 	triggerValues()->clear();
+	triggerDipValues()->clear();
+	triggerPeakValues()->clear();
+	triggerBaseLines()->clear();
 
 	times()->reserve(runner()->eventTimeWindow());
 	signals()->reserve(runner()->eventTimeWindow());

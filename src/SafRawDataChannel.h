@@ -31,6 +31,9 @@ private:
 	std::vector<double> m_signals;
 	std::vector<int> m_triggerTimes;
 	std::vector<double> m_triggerValues;
+	std::vector<double> m_triggerDipValues;
+	std::vector<double> m_triggerPeakValues;
+	std::vector<double> m_triggerBaseLines;
 
 
 public:
@@ -52,6 +55,9 @@ public:
 	std::vector<double> * signals() {return &m_signals;}
 	std::vector<int> * triggerTimes() {return &m_triggerTimes;}
 	std::vector<double> * triggerValues() {return &m_triggerValues;}
+	std::vector<double> * triggerDipValues() {return &m_triggerDipValues;}
+	std::vector<double> * triggerPeakValues() {return &m_triggerPeakValues;}
+	std::vector<double> * triggerBaseLines() {return &m_triggerBaseLines;}
 };
 
 #endif /* SAFRAWDATACHANNEL_H_ */

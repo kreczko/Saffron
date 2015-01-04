@@ -11,7 +11,8 @@
 //_____________________________________________________________________________
 
 SafRawPlots::SafRawPlots(SafRunner * runner) :
-  SafAlgorithm(runner, "SafRawPlots")
+  SafAlgorithm(runner, "SafRawPlots"),
+  m_threading(true)
 {}
 
 
@@ -75,7 +76,15 @@ void SafRawPlots::initialize()
 
 void SafRawPlots::execute()
 {
-	fill();
+	if (m_threading) {
+		std::thread t1(&SafRawPlots::fill, this, 1);
+		fill(0);
+		t1.join();
+	}
+	else {
+		fill(0);
+		fill(1);
+	}
 }
 
 
@@ -117,7 +126,7 @@ void SafRawPlots::finalize()
 
 //_____________________________________________________________________________
 
-void SafRawPlots::fill()
+void SafRawPlots::fill(int thread)
 {
 	unsigned int nGlibs = runner()->geometry()->nGlibs();
 	unsigned int nChannels = runner()->geometry()->nChannels();
@@ -129,17 +138,21 @@ void SafRawPlots::fill()
 			channel = runner()->rawData()->channel(i, j);
 			plotIndex = i*nChannels + j;
 
-
 			for (unsigned int k=0; k<channel->nEntries(); k++) {
-				// Waveforms.
-				if (runner()->event() == 0) {
-					h_firstEventWaveforms[plotIndex]->SetBinContent(
-							channel->times()->at(k), channel->signals()->at(k));
+				if (thread == 0) {
+					// Waveforms.
+					if (runner()->event() == 0) {
+						h_firstEventWaveforms[plotIndex]->SetBinContent(
+								channel->times()->at(k), channel->signals()->at(k));
+					}				
+					h_allSignals->Fill(double(plotIndex), channel->signals()->at(k));
 				}
-
-				// Signal dists.
-			  h_signals[plotIndex]->Fill(channel->signals()->at(k));
-			  h_allSignals->Fill(double(plotIndex), channel->signals()->at(k));
+		
+		
+				else if (thread == 1) {
+					// Signal dists.
+					h_signals[plotIndex]->Fill(channel->signals()->at(k));
+				}
 			}
 		}
 	}
