@@ -15,7 +15,7 @@ SafTrigger::SafTrigger(SafRunner * runner) :
   m_triggerWindowSizeA(16),
   m_triggerWindowSizeB(8),
   m_triggerWindowSizeC(8),
-  m_triggerValueCut(350),
+  m_triggerValueCut(100),
   m_nThreadsPerGlib(4),
   m_threading(true),
   m_nTriggers(0),

@@ -70,6 +70,7 @@ public:
 	unsigned int runMode() {return m_runMode;}
 	unsigned int event() {return m_event;}
 	TFile * saveFile() {return m_saveFile;}
+	unsigned int nEvents() {return m_nEvents;}
 };
 
 #endif /* SAFRUNNER_H_ */
