@@ -2,7 +2,7 @@
  * SafTrigger.h
  *
  *  Created on: Dec 22, 2014
- *      Author: Daniel Saunders
+ *      Author: Daniel Saunders & Gabriela Pomery
  */
 
 #ifndef SAFTRIGGER_H_
@@ -27,7 +27,7 @@ private:
   unsigned int m_nTriggers;
   bool m_caching;
   std::vector<TH1F*> * h_triggerValues;
-
+  
 
 public:
   // Methods __________________________________________________________________

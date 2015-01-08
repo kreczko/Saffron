@@ -50,6 +50,9 @@ void SafTriggerPlots::initialize()
 	h_nTriggers = new TH1F("AverageTriggerRate", "AverageTriggerRate", nC*nG, 
 			0, nC*nG);
 
+	int nChannels =  nC*nG; 
+	h_allTriggers = new TH2F("AllTriggerDist", "AllTriggerDist", nChannels, -0.5, nChannels-0.5, 500, 100, 2500);
+
 
 	// Root file directories.
 	TDirectory * instance_direc = runner()->saveFile()->mkdir(name().c_str());
@@ -146,6 +149,13 @@ void SafTriggerPlots::finalize()
 					channel->nTriggers()/(1.*runner()->nEvents()));
 		}
 	}
+
+	for (unsigned int i=0; i<h_triggerValues->size(); i++){
+		for (unsigned int j=0; j<h_triggerValues->at(i)->GetNbinsX(); j++) {
+			h_allTriggers->SetBinContent(i, j, h_triggerValues->at(i)->GetBinContent(j));	
+		}
+	}
+
 	
 	runner()->saveFile()->cd(name().c_str());
 	h_dipValues->Write();
@@ -155,6 +165,7 @@ void SafTriggerPlots::finalize()
 	h_dipVsTriggerValues->Write();
 	h_peakVsTriggerValues->Write();
 	h_nTriggers->Write();
+	h_allTriggers->Write(); 
 }
 
 

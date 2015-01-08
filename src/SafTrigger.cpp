@@ -36,6 +36,8 @@ SafTrigger::~SafTrigger()
 void SafTrigger::initialize()
 {
 	m_threading = true;
+	unsigned int nG = runner()->geometry()->nGlibs();
+	unsigned int nc = runner()->geometry()->nChannels();
 
 	h_triggerValues = initPerChannelPlots("FirstEventTriggerValues", "FirstEventTriggerValues", 
 		runner()->eventTimeWindow(), 0.0, runner()->eventTimeWindow());
@@ -46,6 +48,7 @@ void SafTrigger::initialize()
 		std::stringstream ssGlib; ssGlib<<i;
 		instance_direc->mkdir(("FirstEventTriggerValues/Glib" + ssGlib.str()).c_str());
 	}
+
 }
 
 
@@ -197,6 +200,7 @@ void SafTrigger::finalize()
 
 		h_triggerValues->at(i)->Write();
 	}
+
 }
 
 
