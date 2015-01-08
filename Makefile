@@ -5,7 +5,7 @@ ODIR=obj
 SOURCES=Saffron.cpp src/SafRunner.cpp src/SafDataSet.cpp src/SafGeometry.cpp \
         src/SafRawDataChannel.cpp src/SafRawDataSet.cpp src/SafAlgorithm.cpp \
         src/SafEventBuilder.cpp src/SafRawPlots.cpp src/SafTrigger.cpp \
-        src/SafTriggerPlots.cpp
+        src/SafTriggerPlots.cpp src/SafPeakFitter.cpp
 
 OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=saffron

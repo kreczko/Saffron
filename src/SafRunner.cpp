@@ -23,6 +23,7 @@ SafRunner::SafRunner() :
 	m_algorithms.push_back(new SafRawPlots(this));
 	m_algorithms.push_back(new SafTrigger(this));
 	m_algorithms.push_back(new SafTriggerPlots(this));
+	m_algorithms.push_back(new SafPeakFitter(this));
 
 	// Geometry.
 	m_geometry = new SafGeometry();

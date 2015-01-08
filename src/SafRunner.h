@@ -20,6 +20,7 @@
 #include "TFile.h"
 #include "SafRawPlots.h"
 #include "SafTriggerPlots.h"
+#include "SafPeakFitter.h"
 
 
 // Forward declarations.
