@@ -17,8 +17,8 @@ class SafTriggerPlots: public SafAlgorithm
 private:
 	// Members __________________________________________________________________
 
-	std::vector<TH1F*> h_firstEventPeaks;
-	std::vector<TH1F*> h_triggerValues;
+	std::vector<TH1F*> * h_firstEventPeaks;
+	std::vector<TH1F*> * h_triggerValues;
 	TH1F * h_dipValues;
 	TH1F * h_peakValues;
 	TH1F * h_allTriggerValues;

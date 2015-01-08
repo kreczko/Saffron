@@ -24,10 +24,9 @@ private:
   unsigned int m_triggerWindowSizeB;
   unsigned int m_triggerWindowSizeC;
   double m_triggerValueCut;
-  unsigned int m_nThreadsPerGlib;
-  bool m_threading;
   unsigned int m_nTriggers;
   bool m_caching;
+  std::vector<TH1F*> * h_triggerValues;
 
 
 public:
@@ -38,14 +37,14 @@ public:
 	void initialize();
 	void execute();
 	void finalize();
+  void threadExecute(unsigned int iGlib, unsigned int iLow, unsigned int iUp);
 
 	void scanChannel(SafRawDataChannel * channel);
 	void scanGlib(unsigned int iGlib);
-	void scanChannels(unsigned int iGlib, unsigned int iLow, unsigned int iUp);
 	void evalTimeWindow(std::vector<double> * signals,
 		std::vector<int> * times, unsigned int i, double * triggerValue, 
 		double * triggerDipValue, double * triggerPeakValue, double * triggerBaseLine, 
-		bool * firstTimeEval);
+		bool * firstTimeEval, double * cacheA, double * cacheB, double * cacheC);
 };
 
 #endif /* SAFTRIGGER_H_ */

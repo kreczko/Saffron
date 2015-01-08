@@ -22,6 +22,7 @@ private:
 	double m_mean; //MC mode.
 	double m_rms; //MC mode.
 	unsigned int m_treePos;
+	TTree * m_tree;
 
 
 public:

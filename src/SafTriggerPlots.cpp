@@ -33,34 +33,19 @@ void SafTriggerPlots::initialize()
 	unsigned int nG = runner()->geometry()->nGlibs();
 	unsigned int nC = runner()->geometry()->nChannels();
 	
-	h_allTriggerValues = new TH1F("TriggerValues", "TriggerValues", 500, -1000, 2000);
-	h_dipValues = new TH1F("DipValues", "DipValues", 500, -1000, 2000);
-	h_peakValues = new TH1F("PeakValues", "PeakValues", 500, -1000, 2000);
+	h_allTriggerValues = new TH1F("TriggerValues", "TriggerValues", 500, 0, 6000);
+	h_dipValues = new TH1F("DipValues", "DipValues", 500, -1000, 2500);
+	h_peakValues = new TH1F("PeakValues", "PeakValues", 500, -1000, 2500);
 	h_dipVsPeakValues = new TH2F("PeakVsDipValues", "PeakVsDipValues", 500, -1000, 
-			2000, 500, -1000, 2000);
+			2500, 500, -1000, 2500);
 	h_dipVsTriggerValues = new TH2F("DipVsTriggerValues", "DipVsTriggerValues", 500, -1000, 
-			2000, 500, -1000, 2000);
+			2500, 500, -1000, 2500);
 	h_peakVsTriggerValues = new TH2F("PeakVsTriggerValues", "PeakVsTriggerValues", 500, -1000, 
-			2000, 500, -1000, 2000);
+			2500, 500, -1000, 2500);
 	
-
-	for (unsigned int i=0; i<nG; i++) {
-		std::stringstream ssGlib; ssGlib<<i;
-		for (unsigned int j=0; j<nC; j++) {
-			std::stringstream ssChan; ssChan<<j;
-
-			// First set peaks.
-			std::string name = "FirstEventPeaks" + ssChan.str() + "-" + ssGlib.str();
-			TH1F * plot = new TH1F(name.c_str(), name.c_str(),
-					runner()->eventTimeWindow(), 0.0, runner()->eventTimeWindow());
-			h_firstEventPeaks.push_back(plot);
-
-			// Trigger Value dists.
-			name = "TriggerValues" + ssChan.str() + "-" + ssGlib.str();
-			h_triggerValues.push_back(new TH1F(name.c_str(), name.c_str(), 500, 100, 2000));
-		}
-	}
-	
+  h_firstEventPeaks = initPerChannelPlots("FirstEventPeaks", "FirstEventPeaks", 
+		runner()->eventTimeWindow(), 0.0, runner()->eventTimeWindow());
+	h_triggerValues = initPerChannelPlots("TriggerValues", "TriggerValues", 500, 100, 2500);
 	
 	h_nTriggers = new TH1F("AverageTriggerRate", "AverageTriggerRate", nC*nG, 
 			0, nC*nG);
@@ -119,12 +104,12 @@ void SafTriggerPlots::fill()
 				
 				// Peaks.
 				if (runner()->event() == 0) {
-					h_firstEventPeaks[plotIndex]->Fill(
+					h_firstEventPeaks->at(plotIndex)->Fill(
 							channel->triggerTimes()->at(k), channel->triggerValues()->at(k));
 				}
 
 				// Trigger value dists.
-			  h_triggerValues[plotIndex]->Fill(channel->triggerValues()->at(k));
+			  h_triggerValues->at(plotIndex)->Fill(channel->triggerValues()->at(k));
 			}
 		}
 	}
@@ -135,20 +120,20 @@ void SafTriggerPlots::fill()
 
 void SafTriggerPlots::finalize()
 {
-	for (unsigned int i=0; i<h_firstEventPeaks.size(); i++) {
-		int iGlib = i/76;
+	for (unsigned int i=0; i<h_firstEventPeaks->size(); i++) {
+		int iGlib = i/runner()->geometry()->nChannels();
 		std::stringstream ssGlib; ssGlib << iGlib;
 		runner()->saveFile()->cd((name() + "/FirstPeaks/Glib" + ssGlib.str()).c_str());
 
-		h_firstEventPeaks[i]->Write();
+		h_firstEventPeaks->at(i)->Write();
 	}
 
-	for (unsigned int i=0; i<h_triggerValues.size(); i++) {
-		int iGlib = i/76;
+	for (unsigned int i=0; i<h_triggerValues->size(); i++) {
+		int iGlib = i/runner()->geometry()->nChannels();
 		std::stringstream ssGlib; ssGlib << iGlib;
 		runner()->saveFile()->cd((name() + "/TriggerValues/Glib" + ssGlib.str()).c_str());
 
-		h_triggerValues[i]->Write();
+		h_triggerValues->at(i)->Write();
 	}
 	
 	unsigned int nGlibs = runner()->geometry()->nGlibs();

@@ -33,6 +33,9 @@ SafEventBuilder::~SafEventBuilder()
 void SafEventBuilder::initialize()
 {
 	if (!runner()->rawData()) new SafRawDataSet(runner());
+	TFile * fInput = new TFile("test_02dec1445.root", "r");
+	m_tree = (TTree*)fInput->Get("waveforms;64");
+	runner()->saveFile()->cd();
 }
 
 
@@ -58,26 +61,20 @@ void SafEventBuilder::finalize()
 
 void SafEventBuilder::realData()
 {
-	TFile * fInput = new TFile("test_02dec1445.root", "r");
-	fInput->cd();
-	TTree * t1 = (TTree*)fInput->Get("waveforms;64");
-	runner()->saveFile()->cd();
-
-
 	// Read tree.
   int glib, glibchan,trigger,layer,chanx,chany;
 	std::vector<int> * waveform = new std::vector<int>;
-	t1->SetBranchAddress("glib",&glib);
-	t1->SetBranchAddress("glibchan",&glibchan);
-	t1->SetBranchAddress("trigger",&trigger);
-	t1->SetBranchAddress("layer",&layer);
-	t1->SetBranchAddress("chanx",&chanx);
-	t1->SetBranchAddress("chany",&chany);
-	t1->SetBranchAddress("waveform",&waveform);
+	m_tree->SetBranchAddress("glib",&glib);
+	m_tree->SetBranchAddress("glibchan",&glibchan);
+	m_tree->SetBranchAddress("trigger",&trigger);
+	m_tree->SetBranchAddress("layer",&layer);
+	m_tree->SetBranchAddress("chanx",&chanx);
+	m_tree->SetBranchAddress("chany",&chany);
+	m_tree->SetBranchAddress("waveform",&waveform);
 
-	t1->GetEntry(m_treePos);
+	m_tree->GetEntry(m_treePos);
 	while (trigger == runner()->event()) {
-		t1->GetEntry(m_treePos);
+		m_tree->GetEntry(m_treePos);
 		m_treePos++;
 		SafRawDataChannel * channel = runner()->rawData()->channel(glib-112, glibchan);
 		for (unsigned int i=0; i<waveform->size(); i++) {
@@ -88,9 +85,7 @@ void SafEventBuilder::realData()
 		channel->setNEntries(channel->times()->size());
 	}
 
-
-	fInput->Close();
-	runner()->saveFile()->cd();
+	//runner()->saveFile()->cd();
 }
 
 

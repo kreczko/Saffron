@@ -11,8 +11,7 @@
 //_____________________________________________________________________________
 
 SafRawPlots::SafRawPlots(SafRunner * runner) :
-  SafAlgorithm(runner, "SafRawPlots"),
-  m_threading(true)
+  SafAlgorithm(runner, "SafRawPlots")
 {}
 
 
@@ -29,25 +28,14 @@ SafRawPlots::~SafRawPlots()
 
 void SafRawPlots::initialize()
 {
+	m_threading = true;
 	unsigned int nG = runner()->geometry()->nGlibs();
 	unsigned int nC = runner()->geometry()->nChannels();
 
-	for (unsigned int i=0; i<nG; i++) {
-		std::stringstream ssGlib; ssGlib<<i;
-		for (unsigned int j=0; j<nC; j++) {
-			std::stringstream ssChan; ssChan<<j;
+	h_firstEventWaveforms = initPerChannelPlots("FirstEventWaveForm", "FirstEventWaveForm", 
+		runner()->eventTimeWindow(), 0.0, runner()->eventTimeWindow());
+	h_signals = initPerChannelPlots("Signal", "Signal", 500, 7500, 9000);
 
-			// First set waveforms.
-			std::string name = "FirstEventWaveForm" + ssChan.str() + "-" + ssGlib.str();
-			TH1F * plot = new TH1F(name.c_str(), name.c_str(),
-					runner()->eventTimeWindow(), 0.0, runner()->eventTimeWindow());
-			h_firstEventWaveforms.push_back(plot);
-
-			// Signal dists.
-			name = "Signal" + ssChan.str() + "-" + ssGlib.str();
-			h_signals.push_back(new TH1F(name.c_str(), name.c_str(), 500, 7500, 9000));
-		}
-	}
 
 	int nChannels = nC*nG;
 	h_allSignals = new TH2F("AllSignalDist", "AllSignalDist", nChannels, -0.5,
@@ -76,14 +64,8 @@ void SafRawPlots::initialize()
 
 void SafRawPlots::execute()
 {
-	if (m_threading) {
-		std::thread t1(&SafRawPlots::fill, this, 1);
-		fill(0);
-		t1.join();
-	}
-	else {
-		fill(0);
-		fill(1);
+	for (unsigned int i=0; i<runner()->geometry()->nGlibs(); i++){
+		threadExecute(i, 0, runner()->geometry()->nChannels());
 	}
 }
 
@@ -92,27 +74,30 @@ void SafRawPlots::execute()
 
 void SafRawPlots::finalize()
 {
-	for (unsigned int i=0; i<h_firstEventWaveforms.size(); i++) {
-		int iGlib = i/76;
+	for (unsigned int i=0; i<h_firstEventWaveforms->size(); i++) {
+		int iGlib = i/runner()->geometry()->nChannels();
 		std::stringstream ssGlib; ssGlib << iGlib;
 		runner()->saveFile()->cd((name() + "/FirstWaveforms/Glib" + ssGlib.str()).c_str());
 
-		h_firstEventWaveforms[i]->Write();
+		h_firstEventWaveforms->at(i)->Write();
 	}
 
-	for (unsigned int i=0; i<h_signals.size(); i++) {
-		int iGlib = i/76;
+	for (unsigned int i=0; i<h_signals->size(); i++) {
+		for (unsigned int j=0; j<h_signals->at(i)->GetNbinsX(); j++) {
+			h_allSignals->SetBinContent(i, j, h_signals->at(i)->GetBinContent(j));
+		}
+		int iGlib = i/runner()->geometry()->nChannels();
 		std::stringstream ssGlib; ssGlib << iGlib;
 		runner()->saveFile()->cd((name() + "/Signals/Glib" + ssGlib.str()).c_str());
 
-		h_signals[i]->Write();
-		int fitStatus = h_signals[i]->Fit("gaus", "Q");
+		h_signals->at(i)->Write();
+		int fitStatus = h_signals->at(i)->Fit("gaus", "Q");
 		if (fitStatus != 0) continue;
-		h_signalMeans->SetBinContent(i, h_signals[i]->GetFunction("gaus")->GetParameter(1));
-		h_signalMeans->SetBinError(i, h_signals[i]->GetFunction("gaus")->GetParError(1));
+		h_signalMeans->SetBinContent(i, h_signals->at(i)->GetFunction("gaus")->GetParameter(1));
+		h_signalMeans->SetBinError(i, h_signals->at(i)->GetFunction("gaus")->GetParError(1));
 
-		h_signalWidths->SetBinContent(i, h_signals[i]->GetFunction("gaus")->GetParameter(2));
-		h_signalWidths->SetBinError(i, h_signals[i]->GetFunction("gaus")->GetParError(2));
+		h_signalWidths->SetBinContent(i, h_signals->at(i)->GetFunction("gaus")->GetParameter(2));
+		h_signalWidths->SetBinError(i, h_signals->at(i)->GetFunction("gaus")->GetParError(2));
 	}
 
 	runner()->saveFile()->cd(name().c_str());
@@ -126,34 +111,20 @@ void SafRawPlots::finalize()
 
 //_____________________________________________________________________________
 
-void SafRawPlots::fill(int thread)
+void SafRawPlots::threadExecute(unsigned int iGlib, unsigned int iLow, 
+	unsigned int iUp)
 {
-	unsigned int nGlibs = runner()->geometry()->nGlibs();
 	unsigned int nChannels = runner()->geometry()->nChannels();
-	SafRawDataChannel * channel;
-	unsigned int plotIndex;
+	for (unsigned int i=iLow; i<iUp; i++) {
+		SafRawDataChannel * channel = runner()->rawData()->channel(iGlib, i);
+		unsigned int plotIndex = iGlib*nChannels + i;
 
-	for (unsigned int i=0; i<nGlibs; i++) {
-		for (unsigned int j=0; j<nChannels; j++) {
-			channel = runner()->rawData()->channel(i, j);
-			plotIndex = i*nChannels + j;
-
-			for (unsigned int k=0; k<channel->nEntries(); k++) {
-				if (thread == 0) {
-					// Waveforms.
-					if (runner()->event() == 0) {
-						h_firstEventWaveforms[plotIndex]->SetBinContent(
-								channel->times()->at(k), channel->signals()->at(k));
-					}				
-					h_allSignals->Fill(double(plotIndex), channel->signals()->at(k));
-				}
-		
-		
-				else if (thread == 1) {
-					// Signal dists.
-					h_signals[plotIndex]->Fill(channel->signals()->at(k));
-				}
-			}
+		for (unsigned int k=0; k<channel->nEntries(); k++) {
+			if (runner()->event() == 0) {
+				h_firstEventWaveforms->at(plotIndex)->SetBinContent(
+						channel->times()->at(k), channel->signals()->at(k));
+			}				
+			h_signals->at(plotIndex)->Fill(channel->signals()->at(k));			
 		}
 	}
 }

@@ -10,7 +10,9 @@
 //____________________________________________________________________________
 
 SafAlgorithm::SafAlgorithm(SafRunner * runner, std::string name) :
-  m_eof(false)
+  m_eof(false),
+  m_nThreadsPerGlib(4),
+  m_threading(false)
 {
 	std::mutex m_mtx;
   m_runner = runner;
@@ -22,8 +24,10 @@ SafAlgorithm::SafAlgorithm(SafRunner * runner, std::string name) :
 
 //____________________________________________________________________________
 
-void SafAlgorithm::detailedInitialize()
+void SafAlgorithm::parentInitialize(unsigned int nGlibs, unsigned int nChannels)
 {
+  m_nGlibs = nGlibs;
+  m_nChannels = nChannels;
 	std::string output = "Initializer of " + m_childClassName;
   std::cout<<output<<std::endl;
   initialize();
@@ -32,12 +36,13 @@ void SafAlgorithm::detailedInitialize()
 
 //____________________________________________________________________________
 
-void SafAlgorithm::detailedExecute()
+void SafAlgorithm::parentExecute()
 {
 	struct timeval  tv1, tv2;
 	gettimeofday(&tv1, NULL);
 	
-	execute();
+  if (m_threading) parentThreadExecute();
+	else  execute();
 	m_event++;
 	
 	gettimeofday(&tv2, NULL);
@@ -49,7 +54,24 @@ void SafAlgorithm::detailedExecute()
 
 //____________________________________________________________________________
 
-void SafAlgorithm::detailedFinalize()
+void SafAlgorithm::parentThreadExecute()
+{
+  std::vector<std::thread> threads;
+  for (unsigned int i=0; i<m_nGlibs; i++) {
+    int step = m_nChannels/m_nThreadsPerGlib;
+    for (unsigned int j=0; j<m_nChannels; j+=step)
+      threads.push_back(std::thread(&SafAlgorithm::threadExecute, this, i, j, j+step));
+  }
+
+  for (std::vector<std::thread>::iterator i = threads.begin(); 
+      i!=threads.end(); i++)
+    (*i).join();
+}
+
+
+//____________________________________________________________________________
+
+void SafAlgorithm::parentFinalize()
 {
 	finalize();
 	m_avTime = m_totalTime/(1000.*(m_event-1));
@@ -107,3 +129,23 @@ TH1F * SafAlgorithm::findPlot(std::string name)
 
 
 //____________________________________________________________________________
+
+std::vector<TH1F*> * SafAlgorithm::initPerChannelPlots(std::string name, 
+  std::string title, unsigned int nBins, double xLow, double xUp) 
+{
+  std::vector<TH1F*> * plots = new std::vector<TH1F*>();
+  for (unsigned int i=0; i<m_nGlibs; i++) {
+    std::stringstream ssGlib; ssGlib<<i;
+    for (unsigned int j=0; j<m_nChannels; j++) {
+      std::stringstream ssChan; ssChan<<j;
+
+      // First set peaks.
+      std::string plotName = name + ssChan.str() + "-" + ssGlib.str();
+      std::string plotTitle = title + ssChan.str() + "-" + ssGlib.str();
+      TH1F * plot = new TH1F(plotName.c_str(), plotTitle.c_str(),
+          nBins, xLow, xUp);
+      plots->push_back(plot);
+    }
+  }
+  return plots;
+}

@@ -51,9 +51,9 @@ public:
 	// Methods __________________________________________________________________
 	SafRunner();
 	virtual ~SafRunner();
-
 	void run();
 	void safPrint(std::string output, int printLevel);
+	void eventLoop();
 
 
 	// Setters and getters ______________________________________________________

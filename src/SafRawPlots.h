@@ -21,12 +21,11 @@ class SafRawPlots: public SafAlgorithm
 {
 private:
 	// Members __________________________________________________________________
-	std::vector<TH1F*> h_firstEventWaveforms;
-	std::vector<TH1F*> h_signals;
+	std::vector<TH1F*> * h_firstEventWaveforms;
+	std::vector<TH1F*> * h_signals;
 	TH2F* h_allSignals;
 	TH1F* h_signalMeans;
 	TH1F* h_signalWidths;
-	bool m_threading;
 
 
 public:
@@ -37,8 +36,7 @@ public:
 	void initialize();
 	void execute();
 	void finalize();
-
-	void fill(int threadID);
+  void threadExecute(unsigned int iGlib, unsigned int iLow, unsigned int iUp);
 };
 
 #endif /* SAFRAWPLOTS_H_ */

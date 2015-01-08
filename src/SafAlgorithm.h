@@ -16,6 +16,8 @@
 #include <sstream>
 #include <sys/time.h>
 #include <mutex>
+#include <thread>
+
 
 // Forward declarations.
 class SafRunner;
@@ -34,9 +36,14 @@ private:
 	unsigned long long m_totalTime;
 	double m_avTime;
 	std::mutex m_mtx;
+	unsigned int m_nGlibs;
+	unsigned int m_nChannels;
 
 
 public:
+	unsigned int m_nThreadsPerGlib;
+	bool m_threading;
+
 	// Methods __________________________________________________________________
 	SafAlgorithm(SafRunner * runner, std::string name);
 	virtual ~SafAlgorithm();
@@ -44,10 +51,14 @@ public:
 	virtual void initialize() {std::cout<<"Default initilizer."<<std::endl;}
 	virtual void execute() {std::cout<<"Default execute."<<std::endl;}
 	virtual void finalize() {std::cout<<"Default finalizer."<<std::endl;}
+	virtual void threadExecute(unsigned int iGlib, unsigned int iChannelLow, 
+		unsigned int iChannelUp) 
+	{std::cout<<"Default thread execute."<<std::endl;}
 
-	void detailedInitialize(); // Should always use detailed versions.
-	void detailedExecute();
-	void detailedFinalize();
+	void parentInitialize(unsigned int, unsigned int); // Should always use parent versions.
+	void parentExecute();
+	void parentFinalize();
+	void parentThreadExecute();
 
 	void plot(double x, std::string name, std::string title,
 			unsigned int nBinsX, double xLow, double xHigh);
@@ -60,6 +71,8 @@ public:
 		unsigned int nBinsX, double xLow, double xHigh, unsigned int nBinsY,
 		double yLow, double yHigh);
 	TH1F * findPlot(std::string name);
+	std::vector<TH1F*> * initPerChannelPlots(std::string name, std::string title, 
+		unsigned int nBins, double low, double up);
 
 
 	// Setters and getters ______________________________________________________
@@ -67,7 +80,7 @@ public:
 	bool eof() {return m_eof;}
 	SafRunner * runner() {return m_runner;}
 	unsigned int event() {return m_event;}
-	double AvTime() {return m_avTime;}
+	double avTime() {return m_avTime;}
 };
 
 #endif /* SAFALGORITHM_H_ */

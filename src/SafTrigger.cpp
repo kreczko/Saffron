@@ -16,10 +16,8 @@ SafTrigger::SafTrigger(SafRunner * runner) :
   m_triggerWindowSizeB(8),
   m_triggerWindowSizeC(8),
   m_triggerValueCut(100),
-  m_nThreadsPerGlib(4),
-  m_threading(true),
   m_nTriggers(0),
-  m_caching(false)
+  m_caching(true)
 {
 	m_triggerWindowSizeTotal = m_triggerWindowSizeA + m_triggerWindowSizeB
 			+ m_triggerWindowSizeC;
@@ -37,36 +35,31 @@ SafTrigger::~SafTrigger()
 
 void SafTrigger::initialize()
 {
+	m_threading = true;
+
+	h_triggerValues = initPerChannelPlots("FirstEventTriggerValues", "FirstEventTriggerValues", 
+		runner()->eventTimeWindow(), 0.0, runner()->eventTimeWindow());
+
+	TDirectory * instance_direc = runner()->saveFile()->mkdir(name().c_str());
+	instance_direc->mkdir("FirstEventTriggerValues");
+	for (unsigned int i=0; i<runner()->geometry()->nGlibs(); i++) {
+		std::stringstream ssGlib; ssGlib<<i;
+		instance_direc->mkdir(("FirstEventTriggerValues/Glib" + ssGlib.str()).c_str());
+	}
 }
 
 
 //_____________________________________________________________________________
 
-void SafTrigger::scanChannels(unsigned int iGlib, unsigned int iLow, unsigned int iUp)
+void SafTrigger::threadExecute(unsigned int iGlib, unsigned int iChannelLow, 
+	unsigned int iChannelUp)
 {
-	unsigned int nChannels = runner()->geometry()->nChannels();
-	for (unsigned int i=iLow; i<std::min(iUp, runner()->geometry()->nChannels()); i++) {
+	for (unsigned int i=iChannelLow; i<std::min(iChannelUp, 
+		runner()->geometry()->nChannels()); i++) {
 		scanChannel(runner()->rawData()->channel(iGlib, i));
 	}
 }
 
-
-//_____________________________________________________________________________
-
-void SafTrigger::scanGlib(unsigned int iGlib)
-{
-	unsigned int nChannels = runner()->geometry()->nChannels();
-	int step = nChannels/m_nThreadsPerGlib;
-	std::vector<std::thread> threads;
-	for (unsigned int i=0; i<nChannels; i+=step) {
-		threads.push_back(std::thread(&SafTrigger::scanChannels, this, iGlib, i, i+step));
-	}
-	
-	for (std::vector<std::thread>::iterator i = threads.begin(); 
-			i!=threads.end(); i++) {
-		(*i).join();
-	}
-}
 
 
 //_____________________________________________________________________________
@@ -76,25 +69,12 @@ void SafTrigger::execute()
 	unsigned int nGlibs = runner()->geometry()->nGlibs();
 	unsigned int nChannels = runner()->geometry()->nChannels();
 	
-	if (m_threading) {
-		std::vector<std::thread> threads;
-		for (unsigned int i=0; i<nGlibs; i++) {
-			threads.push_back(std::thread(&SafTrigger::scanGlib, this, i));
-		}
-		
-		for (std::vector<std::thread>::iterator i = threads.begin(); 
-				i!=threads.end(); i++) {
-			(*i).join();
+	for (unsigned int i=0; i<nGlibs; i++) {
+		for (unsigned int j=0; j<nChannels; j++) {
+			scanChannel(runner()->rawData()->channel(i, j));
 		}
 	}
 	
-	else {
-		for (unsigned int i=0; i<nGlibs; i++) {
-			for (unsigned int j=0; j<nChannels; j++) {
-				scanChannel(runner()->rawData()->channel(i, j));
-			}
-		}
-	}
 	for (unsigned int i=0; i<nGlibs; i++) {
 	  for (unsigned int j=0; j<nChannels; j++) {
 			m_nTriggers += runner()->rawData()->channel(i, j)->nTriggers();
@@ -114,28 +94,40 @@ void SafTrigger::scanChannel(SafRawDataChannel * channel)
 
 	
 	bool firstTimeEval = true;
+	double triggerValue;
+	double triggerDipValue;
+	double triggerPeakValue;
+	double triggerBaseLine;
+	double cacheA = 0.0;
+	double cacheB = 0.0; 
+	double cacheC = 0.0;
+	bool triggered = false;
+  unsigned int plotIndex = channel->glibID() * runner()->geometry()->nChannels() +
+		  channel->channelID();
+
 	for (unsigned int i=0; i<times->size() - m_triggerWindowSizeTotal; i++) {
 		// Temporary variables used to retrieve info from eval method. Also used 
-		// for caching.
-		double triggerValue;
-		double triggerDipValue;
-		double triggerPeakValue;
-		double triggerBaseLine;
-		
+		// for caching.		
 		evalTimeWindow(signals, times, i, &triggerValue, &triggerDipValue, 
-				&triggerPeakValue, &triggerBaseLine, &firstTimeEval);
+				&triggerPeakValue, &triggerBaseLine, &firstTimeEval, &cacheA, &cacheB,
+				&cacheC);
 		
-		if (triggerValue > m_triggerValueCut) {
+	  if (event() == 0) h_triggerValues->at(plotIndex)->SetBinContent(i, triggerValue);
+		
+		if (triggerValue > m_triggerValueCut && !triggered) {
 			channel->triggerTimes()->push_back(times->at(i));
 			channel->triggerValues()->push_back(triggerValue);
 			channel->triggerDipValues()->push_back(triggerDipValue);
 			channel->triggerPeakValues()->push_back(triggerPeakValue);
 			channel->triggerBaseLines()->push_back(triggerBaseLine);
 			nTriggers++;
-			i += m_triggerWindowSizeB;
+			triggered = true;
+			//i += m_triggerWindowSizeB;
 		}
+		else if (triggerValue < m_triggerValueCut) triggered = false;
+
 	}
-	
+	//std::exit(0);
 
 	channel->setNTriggers(channel->triggerTimes()->size());
 }
@@ -146,68 +138,48 @@ void SafTrigger::scanChannel(SafRawDataChannel * channel)
 void SafTrigger::evalTimeWindow(std::vector<double> * signals,
 		std::vector<int> * times, unsigned int iStart, double * triggerValue, 
 		double * triggerDipValue, double * triggerPeakValue, double * triggerBaseLine,
-		bool * firstTimeEval)
+		bool * firstTimeEval, double * cacheA, double * cacheB, double * cacheC)
 {
 	// Cannot handle zero surpression in this version.
-	// First eval case for this channel, and/or no caching cases.
-	double baseLine = 0.0;
-	double peakBit = 0.0;
-	double dipBit = 0.0;
-	
+	// First eval case for this channel, and/or no caching cases.	
 	
 	if (*firstTimeEval || !m_caching) {
+		(*cacheA) = 0.0;
+		(*cacheB) = 0.0; 
+		(*cacheC) = 0.0;
+
 		unsigned int i;
 		for (i = iStart; i<iStart + m_triggerWindowSizeA; i++)
-			baseLine += signals->at(i);
-		baseLine /= (1.*m_triggerWindowSizeA);
-	
-	
+			(*cacheA) += signals->at(i);
+
 		for (; i<iStart + m_triggerWindowSizeA + m_triggerWindowSizeB; i++)
-			peakBit += signals->at(i) - baseLine;
-		peakBit /= (1.*m_triggerWindowSizeB);
-	
+			(*cacheB) += signals->at(i);
 	
 		for (; i<iStart + m_triggerWindowSizeTotal; i++)
-			dipBit += signals->at(i) - baseLine;
-		dipBit /= (1.*m_triggerWindowSizeC);
-		
-		
-		(*triggerValue) = peakBit - dipBit;;
-		(*triggerDipValue) = dipBit;
-		(*triggerPeakValue) = peakBit;
-		(*triggerBaseLine) = baseLine;
+			(*cacheC) += signals->at(i);
+
 		(*firstTimeEval) = false;
 	}
 	
 	
 	// Otherwise, fancy stuff with caching.
 	else {
-		// Broken.
-		unsigned int triggerWindowSizeAB = m_triggerWindowSizeA + m_triggerWindowSizeB;
-		(*triggerPeakValue) += (*triggerBaseLine);
-		(*triggerDipValue) += (*triggerBaseLine);
+		unsigned int triggerWindowSizeAB = m_triggerWindowSizeA + m_triggerWindowSizeB;	
+		(*cacheA) -= signals->at(iStart - 1);
+		(*cacheA) += signals->at(iStart + m_triggerWindowSizeA - 1);
 		
-		(*triggerPeakValue) *= (1.*m_triggerWindowSizeB);
-		(*triggerDipValue) *= (1.*m_triggerWindowSizeC);
+		(*cacheB) -= signals->at(iStart + m_triggerWindowSizeA - 1);
+		(*cacheB) += signals->at(iStart + triggerWindowSizeAB - 1);
 		
-		
-		(*triggerBaseLine) -= signals->at(iStart - 1)/(1.*m_triggerWindowSizeA);
-		(*triggerBaseLine) += signals->at(iStart + m_triggerWindowSizeA - 1)/(1.*m_triggerWindowSizeA);
-		
-		(*triggerPeakValue) -= signals->at(iStart + m_triggerWindowSizeA - 1);
-		(*triggerPeakValue) += signals->at(iStart + triggerWindowSizeAB - 1);
-		
-		(*triggerDipValue) -= signals->at(iStart + triggerWindowSizeAB - 1);
-		(*triggerDipValue) += signals->at(iStart + m_triggerWindowSizeTotal - 1);
-		
-		(*triggerPeakValue) -= (*triggerBaseLine);
-		(*triggerDipValue) -= (*triggerBaseLine);
-		
-		(*triggerPeakValue) /= (1.*m_triggerWindowSizeB);
-		(*triggerDipValue) /= (1.*m_triggerWindowSizeC);
-		
-		(*triggerValue) = (*triggerPeakValue) - (*triggerDipValue);
+		(*cacheC) -= signals->at(iStart + triggerWindowSizeAB - 1);
+		(*cacheC) += signals->at(iStart + m_triggerWindowSizeTotal - 1);
 	}
+
+
+	(*triggerBaseLine) = (*cacheA)/(1.0*m_triggerWindowSizeA);
+	(*triggerDipValue) = (*cacheB)/(1.0*m_triggerWindowSizeB) - (*triggerBaseLine);
+	(*triggerPeakValue) = (*cacheC)/(1.0*m_triggerWindowSizeC) - (*triggerBaseLine);
+	(*triggerValue) = (*triggerPeakValue) - (*triggerDipValue);
 }
 
 
@@ -216,7 +188,15 @@ void SafTrigger::evalTimeWindow(std::vector<double> * signals,
 
 void SafTrigger::finalize()
 {
-	std::cout<<"nTriggers:\t"<<m_nTriggers<<std::endl;
+	//std::cout<<"nTriggers:\t"<<m_nTriggers<<std::endl;
+
+	for (unsigned int i=0; i<h_triggerValues->size(); i++) {
+		int iGlib = i/runner()->geometry()->nChannels();
+		std::stringstream ssGlib; ssGlib << iGlib;
+		runner()->saveFile()->cd((name() + "/FirstEventTriggerValues/Glib" + ssGlib.str()).c_str());
+
+		h_triggerValues->at(i)->Write();
+	}
 }
 
 
