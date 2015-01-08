@@ -29,7 +29,7 @@ SafRunner::SafRunner() :
 	m_geometry = new SafGeometry();
 
 	// Options.
-	m_nEvents = 60;
+	m_nEvents = 2000;
 	m_runMode = 1; // 0 for MC, 1 for real data.
 
 	// Save file.
@@ -83,8 +83,14 @@ void SafRunner::run()
 		std::cout<<(*ialgo)->name()<<"\t\t"<<(*ialgo)->avTime()<<std::endl;
 		totAvTime += (*ialgo)->avTime();
 	}
-	std::cout<<"\nTotal average: \t\t"<<totAvTime<<std::endl;
-	std::cout<<"\nTotal execution time: \t"<<totExTime/(1000.*m_nEvents)<<std::endl;
+
+	double scopeEquivRead = m_nEvents*2048*geometry()->nGlibs()*geometry()->nChannels()*8/1000000.;
+	std::cout<<"\nTotal time sample processed (scope mode): \t"<<2048*m_nEvents*16/1000000.<<" (ms)"<<std::endl;
+	std::cout<<"(Scope mode: amount of data read): \t\t"<<scopeEquivRead<<" (mb)"<<std::endl;
+	std::cout<<"Total algorithm average (per event): \t\t"<<totAvTime<<" (us)"<<std::endl;
+	std::cout<<"Total execution time (per event): \t\t"<<totExTime/(1000.*m_nEvents)<<" (us)"<<std::endl;
+	std::cout<<"Total execution time: \t\t\t\t"<<totExTime/1000000<<" (s)"<<std::endl;
+	std::cout<<"Data process rate: \t\t\t\t"<<scopeEquivRead/(0.000001*totExTime)<<" (mb/s)"<<std::endl;
 }
 
 
