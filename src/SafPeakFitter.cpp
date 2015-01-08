@@ -1,17 +1,17 @@
 /*
- * SafTrigger.cpp
+ * SafPeakFitter.cpp
  *
  *  Created on: Dec 22, 2014
  *      Author: Daniel Saunders
  */
 
-#include "SafTrigger.h"
+#include "SafPeakFitter.h"
 
 
 //_____________________________________________________________________________
 
-SafTrigger::SafTrigger(SafRunner * runner) :
-  SafAlgorithm(runner, "SafTrigger"),
+SafPeakFitter::SafPeakFitter(SafRunner * runner) :
+  SafAlgorithm(runner, "SafPeakFitter"),
   m_triggerWindowSizeA(16),
   m_triggerWindowSizeB(8),
   m_triggerWindowSizeC(8),
@@ -26,14 +26,14 @@ SafTrigger::SafTrigger(SafRunner * runner) :
 
 //_____________________________________________________________________________
 
-SafTrigger::~SafTrigger()
+SafPeakFitter::~SafPeakFitter()
 {
 }
 
 
 //_____________________________________________________________________________
 
-void SafTrigger::initialize()
+void SafPeakFitter::initialize()
 {
 	m_threading = true;
 
@@ -46,13 +46,12 @@ void SafTrigger::initialize()
 		std::stringstream ssGlib; ssGlib<<i;
 		instance_direc->mkdir(("FirstEventTriggerValues/Glib" + ssGlib.str()).c_str());
 	}
-
 }
 
 
 //_____________________________________________________________________________
 
-void SafTrigger::threadExecute(unsigned int iGlib, unsigned int iChannelLow, 
+void SafPeakFitter::threadExecute(unsigned int iGlib, unsigned int iChannelLow, 
 	unsigned int iChannelUp)
 {
 	for (unsigned int i=iChannelLow; i<std::min(iChannelUp, 
@@ -65,7 +64,7 @@ void SafTrigger::threadExecute(unsigned int iGlib, unsigned int iChannelLow,
 
 //_____________________________________________________________________________
 
-void SafTrigger::execute()
+void SafPeakFitter::execute()
 {
 	unsigned int nGlibs = runner()->geometry()->nGlibs();
 	unsigned int nChannels = runner()->geometry()->nChannels();
@@ -86,7 +85,7 @@ void SafTrigger::execute()
 
 //_____________________________________________________________________________
 
-void SafTrigger::scanChannel(SafRawDataChannel * channel)
+void SafPeakFitter::scanChannel(SafRawDataChannel * channel)
 {
 	unsigned int nTriggers = 0;
 	std::vector<int> * times = channel->times();
@@ -123,10 +122,12 @@ void SafTrigger::scanChannel(SafRawDataChannel * channel)
 			channel->triggerBaseLines()->push_back(triggerBaseLine);
 			nTriggers++;
 			triggered = true;
+			//i += m_triggerWindowSizeB;
 		}
 		else if (triggerValue < m_triggerValueCut) triggered = false;
 
 	}
+	//std::exit(0);
 
 	channel->setNTriggers(channel->triggerTimes()->size());
 }
@@ -134,7 +135,7 @@ void SafTrigger::scanChannel(SafRawDataChannel * channel)
 
 //_____________________________________________________________________________
 
-void SafTrigger::evalTimeWindow(std::vector<double> * signals,
+void SafPeakFitter::evalTimeWindow(std::vector<double> * signals,
 		std::vector<int> * times, unsigned int iStart, double * triggerValue, 
 		double * triggerDipValue, double * triggerPeakValue, double * triggerBaseLine,
 		bool * firstTimeEval, double * cacheA, double * cacheB, double * cacheC)
@@ -185,19 +186,8 @@ void SafTrigger::evalTimeWindow(std::vector<double> * signals,
 
 //_____________________________________________________________________________
 
-void SafTrigger::finalize()
-{
-	//std::cout<<"nTriggers:\t"<<m_nTriggers<<std::endl;
-
-	for (unsigned int i=0; i<h_triggerValues->size(); i++) {
-		int iGlib = i/runner()->geometry()->nChannels();
-		std::stringstream ssGlib; ssGlib << iGlib;
-		runner()->saveFile()->cd((name() + "/FirstEventTriggerValues/Glib" + ssGlib.str()).c_str());
-
-		h_triggerValues->at(i)->Write();
-	}
-
-}
+void SafPeakFitter::finalize()
+{}
 
 
 //_____________________________________________________________________________
