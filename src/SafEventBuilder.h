@@ -23,6 +23,9 @@ private:
 	double m_rms; //MC mode.
 	unsigned int m_treePos;
 	TTree * m_tree;
+  int m_glib, m_glibchan, m_trigger, m_layer, m_chanx, m_chany;
+	std::vector<int> * m_waveform;
+	bool m_firstTime;
 
 
 public:
@@ -35,7 +38,7 @@ public:
 	void finalize();
 
 	void monteCarlo();
-	void realData();
+	void realData(unsigned int channelIndexUpper);
 };
 
 #endif /* SAFEVENTBUILDER_H_ */

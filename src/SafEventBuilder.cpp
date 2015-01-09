@@ -17,6 +17,7 @@ SafEventBuilder::SafEventBuilder(SafRunner * runner) :
   m_mean = 8000;
   m_rms = 100;
   m_treePos = 0;
+  m_firstTime = true;
 }
 
 
@@ -35,6 +36,16 @@ void SafEventBuilder::initialize()
 	if (!runner()->rawData()) new SafRawDataSet(runner());
 	TFile * fInput = new TFile("test_02dec1445.root", "r");
 	m_tree = (TTree*)fInput->Get("waveforms;64");
+	
+	m_waveform = new std::vector<int>;
+	m_tree->SetBranchAddress("glib",&m_glib);
+	m_tree->SetBranchAddress("glibchan",&m_glibchan);
+	m_tree->SetBranchAddress("trigger",&m_trigger);
+	m_tree->SetBranchAddress("layer",&m_layer);
+	m_tree->SetBranchAddress("chanx",&m_chanx);
+	m_tree->SetBranchAddress("chany",&m_chany);
+	m_tree->SetBranchAddress("waveform",&m_waveform);
+
 	runner()->saveFile()->cd();
 }
 
@@ -47,7 +58,7 @@ void SafEventBuilder::execute()
 	if (runner()->runMode() == 0) {
 		monteCarlo();
 	}
-	else realData();
+	else realData(runner()->geometry()->nChannels()*runner()->geometry()->nGlibs());
 }
 
 //_____________________________________________________________________________
@@ -59,33 +70,25 @@ void SafEventBuilder::finalize()
 
 //_____________________________________________________________________________
 
-void SafEventBuilder::realData()
+void SafEventBuilder::realData(unsigned int channelIndexUpper)
 {
 	// Read tree.
-  int glib, glibchan,trigger,layer,chanx,chany;
-	std::vector<int> * waveform = new std::vector<int>;
-	m_tree->SetBranchAddress("glib",&glib);
-	m_tree->SetBranchAddress("glibchan",&glibchan);
-	m_tree->SetBranchAddress("trigger",&trigger);
-	m_tree->SetBranchAddress("layer",&layer);
-	m_tree->SetBranchAddress("chanx",&chanx);
-	m_tree->SetBranchAddress("chany",&chany);
-	m_tree->SetBranchAddress("waveform",&waveform);
-
 	m_tree->GetEntry(m_treePos);
-	while (trigger == runner()->event()) {
+	while (m_trigger == runner()->event()) {
 		m_tree->GetEntry(m_treePos);
 		m_treePos++;
-		SafRawDataChannel * channel = runner()->rawData()->channel(glib-112, glibchan);
-		for (unsigned int i=0; i<waveform->size(); i++) {
-			channel->signals()->push_back(waveform->at(i));
+		SafRawDataChannel * channel = runner()->rawData()->channel(m_glib-112, m_glibchan);
+		unsigned int size = m_waveform->size();
+		for (unsigned int i=0; i<size; i++) {
+			channel->signals()->push_back(m_waveform->at(i));
 			channel->times()->push_back(i);
-			//plot(channel->signals()->at(i), "AllSignals", "AllSignals", 500, 7000, 9000);
 		}
 		channel->setNEntries(channel->times()->size());
-	}
 
-	//runner()->saveFile()->cd();
+		if (m_firstTime) m_firstTime = false;
+		unsigned int channelIndex = (m_glib-112)*runner()->geometry()->nChannels() + m_glibchan;
+		if (channelIndex > channelIndexUpper) break;
+	}
 }
 
 
