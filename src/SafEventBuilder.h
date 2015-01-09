@@ -39,6 +39,8 @@ public:
 
 	void monteCarlo();
 	void realData(unsigned int channelIndexUpper);
+	TTree * tree() {return m_tree;}
+	unsigned int treePos() {return m_treePos;}
 };
 
 #endif /* SAFEVENTBUILDER_H_ */

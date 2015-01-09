@@ -11,7 +11,7 @@
 
 SafAlgorithm::SafAlgorithm(SafRunner * runner, std::string name) :
   m_eof(false),
-  m_nThreadsPerGlib(4),
+  m_nThreadsPerGlib(2),
   m_threading(false)
 {
 	std::mutex m_mtx;

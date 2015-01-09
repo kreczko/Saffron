@@ -16,10 +16,10 @@ void treeShortener() {
 	oldtree->SetBranchAddress("waveform",&m_waveform);
 
 	//Create a new file + a clone of old tree in new file
-	TFile *newfile = new TFile("small.root","recreate");
+	TFile *newfile = new TFile("test_02dec1445Small.root","recreate");
 	TTree *newtree = oldtree->CloneTree(0);
 
-	for (int i=0; i<76*4*100; i++) {
+	for (int i=0; i<76*4*500; i++) {
 		oldtree->GetEntry(i);
 		newtree->Fill();
 		if (i%(76*4*10) == 0) std::cout<<i<<std::endl;

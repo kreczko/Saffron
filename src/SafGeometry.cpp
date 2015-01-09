@@ -10,7 +10,7 @@
 //_____________________________________________________________________________
 
 SafGeometry::SafGeometry() :
-  m_nGlibs(2),
+  m_nGlibs(5),
   m_nChannels(76)
 {
 	// TODO Auto-generated constructor stub

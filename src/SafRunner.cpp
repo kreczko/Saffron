@@ -87,6 +87,7 @@ void SafRunner::run()
 	double scopeEquivRead = m_nEvents*2048*geometry()->nGlibs()*geometry()->nChannels()*8/1000000.;
 	std::cout<<"\nTotal time sample processed (scope mode): \t"<<2048*m_nEvents*16/1000000.<<" (ms)"<<std::endl;
 	std::cout<<"(Scope mode: amount of data read): \t\t"<<scopeEquivRead<<" (mb)"<<std::endl;
+	std::cout<<"Fraction tree read: \t\t\t\t"<<((SafEventBuilder*)m_algorithms[0])->treePos()/(1.*((SafEventBuilder*)m_algorithms[0])->tree()->GetEntries())<<std::endl;
 	std::cout<<"Total algorithm average (per event): \t\t"<<totAvTime<<" (us)"<<std::endl;
 	std::cout<<"Total execution time (per event): \t\t"<<totExTime/(1000.*m_nEvents)<<" (us)"<<std::endl;
 	std::cout<<"Total execution time: \t\t\t\t"<<totExTime/1000000<<" (s)"<<std::endl;

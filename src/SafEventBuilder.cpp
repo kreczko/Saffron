@@ -34,7 +34,9 @@ SafEventBuilder::~SafEventBuilder()
 void SafEventBuilder::initialize()
 {
 	if (!runner()->rawData()) new SafRawDataSet(runner());
-	TFile * fInput = new TFile("small.root", "r");
+	//TFile * fInput = new TFile("small.root", "r");
+	TFile * fInput = new TFile("SM1_06Jan2015_1023_run0_scoperun_slowcontrol-small.root", "r");
+	//TFile * fInput = new TFile("test_02dec1445.root", "r");
 	m_tree = (TTree*)fInput->Get("waveforms");
 	
 	m_waveform = new std::vector<int>;
@@ -77,7 +79,7 @@ void SafEventBuilder::realData(unsigned int channelIndexUpper)
 	while (m_trigger == runner()->event()) {
 		m_tree->GetEntry(m_treePos);
 		m_treePos++;
-		SafRawDataChannel * channel = runner()->rawData()->channel(m_glib-112, m_glibchan);
+		SafRawDataChannel * channel = runner()->rawData()->channel(m_glib-111, m_glibchan);
 		unsigned int size = m_waveform->size();
 		for (unsigned int i=0; i<size; i++) {
 			channel->signals()->push_back(m_waveform->at(i));
@@ -86,7 +88,7 @@ void SafEventBuilder::realData(unsigned int channelIndexUpper)
 		channel->setNEntries(channel->times()->size());
 
 		if (m_firstTime) m_firstTime = false;
-		unsigned int channelIndex = (m_glib-112)*runner()->geometry()->nChannels() + m_glibchan;
+		unsigned int channelIndex = (m_glib-111)*runner()->geometry()->nChannels() + m_glibchan;
 		if (channelIndex > channelIndexUpper) break;
 	}
 }

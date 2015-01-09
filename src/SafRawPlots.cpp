@@ -34,12 +34,12 @@ void SafRawPlots::initialize()
 
 	h_firstEventWaveforms = initPerChannelPlots("FirstEventWaveForm", "FirstEventWaveForm", 
 		runner()->eventTimeWindow(), 0.0, runner()->eventTimeWindow());
-	h_signals = initPerChannelPlots("Signal", "Signal", 2000, 7000, 12000);
+	h_signals = initPerChannelPlots("Signal", "Signal", 3000, 7000, 16000);
 
 
 	int nChannels = nC*nG;
 	h_allSignals = new TH2F("AllSignalDist", "AllSignalDist", nChannels, -0.5,
-			nChannels-0.5, 2000, 7500., 16000.);
+			nChannels-0.5, 3000, 7000., 16000.);
 	h_signalMeans = new TH1F("SignalMeans", "SignalMeans", nChannels, -0.5, nChannels-0.5);
 	h_signalWidths = new TH1F("SignalWidths", "SignalWidths", nChannels, -0.5, nChannels-0.5);
 
