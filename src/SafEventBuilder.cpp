@@ -34,8 +34,8 @@ SafEventBuilder::~SafEventBuilder()
 void SafEventBuilder::initialize()
 {
 	if (!runner()->rawData()) new SafRawDataSet(runner());
-	TFile * fInput = new TFile("test_02dec1445.root", "r");
-	m_tree = (TTree*)fInput->Get("waveforms;64");
+	TFile * fInput = new TFile("small.root", "r");
+	m_tree = (TTree*)fInput->Get("waveforms");
 	
 	m_waveform = new std::vector<int>;
 	m_tree->SetBranchAddress("glib",&m_glib);
