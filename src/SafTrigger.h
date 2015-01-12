@@ -37,7 +37,8 @@ public:
 	void initialize();
 	void execute();
 	void finalize();
-  void threadExecute(unsigned int iGlib, unsigned int iLow, unsigned int iUp);
+  void threadExecute(unsigned int iGlib, unsigned int iLow, unsigned int iUp, 
+    int iThread);
 
 	void scanChannel(SafRawDataChannel * channel);
 	void scanGlib(unsigned int iGlib);

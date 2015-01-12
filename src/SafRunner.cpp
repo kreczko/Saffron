@@ -20,7 +20,9 @@ SafRunner::SafRunner() :
 {
 	// Default algorithm list.
 	m_algorithms.push_back(new SafEventBuilder(this));
-	m_algorithms.push_back(new SafRawPlots(this));
+	m_algorithms.push_back(new SafRawPlots(this, false));
+	// m_algorithms.push_back(new SafFilter(this));
+	// m_algorithms.push_back(new SafRawPlots(this, true));
 	m_algorithms.push_back(new SafTrigger(this));
 	m_algorithms.push_back(new SafTriggerPlots(this));
 	m_algorithms.push_back(new SafPeakFitter(this));

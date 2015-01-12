@@ -53,7 +53,7 @@ void SafTrigger::initialize()
 //_____________________________________________________________________________
 
 void SafTrigger::threadExecute(unsigned int iGlib, unsigned int iChannelLow, 
-	unsigned int iChannelUp)
+	unsigned int iChannelUp, int iThread)
 {
 	for (unsigned int i=iChannelLow; i<std::min(iChannelUp, 
 		runner()->geometry()->nChannels()); i++) {
@@ -67,19 +67,8 @@ void SafTrigger::threadExecute(unsigned int iGlib, unsigned int iChannelLow,
 
 void SafTrigger::execute()
 {
-	unsigned int nGlibs = runner()->geometry()->nGlibs();
-	unsigned int nChannels = runner()->geometry()->nChannels();
-	
-	for (unsigned int i=0; i<nGlibs; i++) {
-		for (unsigned int j=0; j<nChannels; j++) {
-			scanChannel(runner()->rawData()->channel(i, j));
-		}
-	}
-	
-	for (unsigned int i=0; i<nGlibs; i++) {
-	  for (unsigned int j=0; j<nChannels; j++) {
-			m_nTriggers += runner()->rawData()->channel(i, j)->nTriggers();
-	  }
+	for (unsigned int i=0; i<runner()->geometry()->nGlibs(); i++){
+		threadExecute(i, 0, runner()->geometry()->nChannels(), -1);
 	}
 }
 

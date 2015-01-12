@@ -11,8 +11,9 @@
 
 SafAlgorithm::SafAlgorithm(SafRunner * runner, std::string name) :
   m_eof(false),
-  m_nThreadsPerGlib(2),
-  m_threading(false)
+  m_nThreadsPerGlib(1),
+  m_threading(false),
+  m_forceSingleThread(true)
 {
 	std::mutex m_mtx;
   m_runner = runner;
@@ -30,6 +31,7 @@ void SafAlgorithm::parentInitialize(unsigned int nGlibs, unsigned int nChannels)
   m_nChannels = nChannels;
 	std::string output = "Initializer of " + m_childClassName;
   std::cout<<output<<std::endl;
+  m_nChannelsPerThread = m_nChannels/m_nThreadsPerGlib;
   initialize();
 }
 
@@ -41,7 +43,7 @@ void SafAlgorithm::parentExecute()
 	struct timeval  tv1, tv2;
 	gettimeofday(&tv1, NULL);
 	
-  if (m_threading) parentThreadExecute();
+  if (m_threading && !m_forceSingleThread) parentThreadExecute();
 	else  execute();
 	m_event++;
 	
@@ -57,14 +59,17 @@ void SafAlgorithm::parentExecute()
 void SafAlgorithm::parentThreadExecute()
 {
   std::vector<std::thread> threads;
+  int ithread = 0;
   for (unsigned int i=0; i<m_nGlibs; i++) {
-    int step = m_nChannels/m_nThreadsPerGlib;
-    for (unsigned int j=0; j<m_nChannels; j+=step)
-      threads.push_back(std::thread(&SafAlgorithm::threadExecute, this, i, j, j+step));
+    for (unsigned int j=0; j<m_nChannels; j+=m_nChannelsPerThread) {
+      threads.push_back(std::thread(&SafAlgorithm::threadExecute, this, i, j, 
+        j+m_nChannelsPerThread, ithread));
+      ithread++;
+    }
   }
 
   for (std::vector<std::thread>::iterator i = threads.begin(); 
-      i!=threads.end(); i++)
+    i != threads.end(); i++)
     (*i).join();
 }
 

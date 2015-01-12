@@ -21,6 +21,7 @@
 #include "SafRawPlots.h"
 #include "SafTriggerPlots.h"
 #include "SafPeakFitter.h"
+#include "SafFilter.h"
 
 
 // Forward declarations.
@@ -46,6 +47,7 @@ private:
 	unsigned int m_runMode;
 	TFile * m_saveFile;
 	unsigned int m_printRate;
+	unsigned int m_threadsPerGlib;
 
 
 public:

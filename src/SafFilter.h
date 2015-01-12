@@ -1,12 +1,12 @@
 /*
- * SafPeakFitter.h
+ * SafFilter.h
  *
  *  Created on: Dec 22, 2014
  *      Author: Daniel Saunders
  */
 
-#ifndef SAFPEAKFITTER_H_
-#define SAFPEAKFITTER_H_
+#ifndef SAFFILTER_H_
+#define SAFFILTER_H_
 
 #include "SafAlgorithm.h"
 #include "SafRunner.h"
@@ -15,22 +15,23 @@
 
 class SafRawDataChannel;
 
-class SafPeakFitter: public SafAlgorithm
+class SafFilter: public SafAlgorithm
 {
 private:
 	// Members __________________________________________________________________
-
+  unsigned int m_filterSize;
 
 public:
   // Methods __________________________________________________________________
-	SafPeakFitter(SafRunner * runner);
-	virtual ~SafPeakFitter();
+  SafFilter(SafRunner * runner);
+  virtual ~SafFilter();
 
-	void initialize();
-	void execute();
-	void finalize();
+  void initialize();
+  void execute();
+  void finalize();
   void threadExecute(unsigned int iGlib, unsigned int iLow, unsigned int iUp,
     int iThread);
+  void filterChannel(SafRawDataChannel * channel);
 };
 
-#endif /* SafPeakFitter_H_ */
+#endif /* SAFFILTER_H_ */

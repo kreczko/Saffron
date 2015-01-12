@@ -33,7 +33,7 @@ void SafPeakFitter::initialize()
 //_____________________________________________________________________________
 
 void SafPeakFitter::threadExecute(unsigned int iGlib, unsigned int iChannelLow, 
-	unsigned int iChannelUp)
+	unsigned int iChannelUp, int iThread)
 {
 	for (unsigned int i=iChannelLow; i<std::min(iChannelUp, 
 		runner()->geometry()->nChannels()); i++) {
@@ -48,7 +48,7 @@ void SafPeakFitter::threadExecute(unsigned int iGlib, unsigned int iChannelLow,
 void SafPeakFitter::execute()
 {
 	for (unsigned int i=0; i<runner()->geometry()->nGlibs(); i++){
-		threadExecute(i, 0, runner()->geometry()->nChannels());
+		threadExecute(i, 0, runner()->geometry()->nChannels(), -1);
 	}
 }
 

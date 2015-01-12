@@ -17,6 +17,7 @@
 #include <sys/time.h>
 #include <mutex>
 #include <thread>
+#include <math.h>
 
 
 // Forward declarations.
@@ -32,7 +33,6 @@ private:
 	bool m_eof; // Flag to show if read all data.
   std::vector< TH1F* > h_th1sSLOW; // Slow performance.
 	std::vector< TH2F* > h_th2sSLOW; // Slow performance.
-	unsigned int m_event;
 	unsigned long long m_totalTime;
 	double m_avTime;
 	std::mutex m_mtx;
@@ -43,6 +43,9 @@ private:
 public:
 	unsigned int m_nThreadsPerGlib;
 	bool m_threading;
+	unsigned int m_nChannelsPerThread;
+	unsigned int m_event;
+	bool m_forceSingleThread;
 
 	// Methods __________________________________________________________________
 	SafAlgorithm(SafRunner * runner, std::string name);
@@ -52,7 +55,7 @@ public:
 	virtual void execute() {std::cout<<"Default execute."<<std::endl;}
 	virtual void finalize() {std::cout<<"Default finalizer."<<std::endl;}
 	virtual void threadExecute(unsigned int iGlib, unsigned int iChannelLow, 
-		unsigned int iChannelUp) 
+		unsigned int iChannelUp, int iThread) 
 	{std::cout<<"Default thread execute."<<std::endl;}
 
 	void parentInitialize(unsigned int, unsigned int); // Should always use parent versions.
