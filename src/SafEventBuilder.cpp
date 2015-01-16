@@ -10,13 +10,13 @@
 //_____________________________________________________________________________
 
 SafEventBuilder::SafEventBuilder(SafRunner * runner) :
-  SafAlgorithm(runner, "SafEventBuilder")
+  SafAlgorithm(runner, "SafEventBuilder"),
+  m_nFileThreads(1)
 {
 	m_randGen = new TRandom3();
   m_randGen->SetSeed();
   m_mean = 8000;
   m_rms = 100;
-  m_treePos = 0;
   m_firstTime = true;
 }
 
@@ -33,21 +33,32 @@ SafEventBuilder::~SafEventBuilder()
 
 void SafEventBuilder::initialize()
 {
-	if (!runner()->rawData()) new SafRawDataSet(runner());
-	//TFile * fInput = new TFile("small.root", "r");
-	TFile * fInput = new TFile("SM1_06Jan2015_1023_run0_scoperun_slowcontrol-small.root", "r");
-	//TFile * fInput = new TFile("test_02dec1445.root", "r");
-	m_tree = (TTree*)fInput->Get("waveforms");
-	
-	m_waveform = new std::vector<int>;
-	m_tree->SetBranchAddress("glib",&m_glib);
-	m_tree->SetBranchAddress("glibchan",&m_glibchan);
-	m_tree->SetBranchAddress("trigger",&m_trigger);
-	m_tree->SetBranchAddress("layer",&m_layer);
-	m_tree->SetBranchAddress("chanx",&m_chanx);
-	m_tree->SetBranchAddress("chany",&m_chany);
-	m_tree->SetBranchAddress("waveform",&m_waveform);
+	m_fileNames.push_back("/storage/SOLID/SM1_14Jan2015_2103_run0_scoperun_2.2V_500000event.root");
 
+	for (unsigned int i=0; i<m_nFileThreads; i++) {
+		m_files.push_back(new TFile(m_fileNames[i].c_str(), "READ"));
+		m_trees.push_back((TTree*)m_files.back()->Get("waveforms"));
+
+
+		m_waveforms.push_back(new std::vector<int>);
+		m_glibs.push_back(0);
+		m_glibchans.push_back(0);
+		m_triggers.push_back(0);
+		m_layers.push_back(0);
+		m_chanxs.push_back(0);
+		m_chanys.push_back(0);
+		m_treePos.push_back(i);
+
+		m_trees.back()->SetBranchAddress("glib",&(m_glibs.back()));
+		m_trees.back()->SetBranchAddress("glibchan",&(m_glibchans.back()));
+		m_trees.back()->SetBranchAddress("trigger",&(m_triggers.back()));
+		m_trees.back()->SetBranchAddress("layer",&(m_layers.back()));
+		m_trees.back()->SetBranchAddress("chanx",&(m_chanxs.back()));
+		m_trees.back()->SetBranchAddress("chany",&(m_chanys.back()));
+		m_trees.back()->SetBranchAddress("waveform",&(m_waveforms.back()));
+		m_trees.back()->GetEvent(0);
+	}
+	m_spareWaveform = new std::vector<int>;
 	runner()->saveFile()->cd();
 }
 
@@ -56,11 +67,14 @@ void SafEventBuilder::initialize()
 
 void SafEventBuilder::execute()
 {
-	runner()->rawData()->clear();
 	if (runner()->runMode() == 0) {
 		monteCarlo();
 	}
-	else realData(runner()->geometry()->nChannels()*runner()->geometry()->nGlibs());
+	else {
+		for (unsigned int i=0; i<m_nFileThreads; i++) {
+			realData(i);
+		}
+	}
 }
 
 //_____________________________________________________________________________
@@ -72,24 +86,41 @@ void SafEventBuilder::finalize()
 
 //_____________________________________________________________________________
 
-void SafEventBuilder::realData(unsigned int channelIndexUpper)
+void SafEventBuilder::realData(unsigned int iThread)
 {
+	int skip = runner()->triggerSkip();
+	if (m_firstTime) {
+		for (unsigned int i=0; i<m_nFileThreads; i++) {
+			m_trees[i]->GetEntry(m_treePos[i]);
+		}
+		m_firstTime = false;
+	}
+
 	// Read tree.
-	m_tree->GetEntry(m_treePos);
-	while (m_trigger == runner()->event()) {
-		m_tree->GetEntry(m_treePos);
-		m_treePos++;
-		SafRawDataChannel * channel = runner()->rawData()->channel(m_glib-111, m_glibchan);
-		unsigned int size = m_waveform->size();
+	while (m_triggers[iThread] < skip) {
+		if (m_triggers[iThread] % 10 == 0 && m_glibchans[iThread] == 0 && m_glibs[iThread] == 111) {
+			m_mtx.lock();
+			std::cout<<"Trigger, skip trigger, thread: "<< m_triggers[iThread]<<"\t"<<skip<<"\t"<<iThread<<std::endl;
+			m_mtx.unlock();
+		}
+		m_trees[iThread]->GetEntry(m_treePos[iThread]);
+		m_treePos[iThread]+=m_nFileThreads;
+	}
+
+
+	int limit = (int)runner()->event() + skip;
+	while (m_triggers[iThread] <= limit) {
+		m_trees[iThread]->GetEntry(m_treePos[iThread]);
+		m_treePos[iThread]+=m_nFileThreads;
+		SafRawDataChannel * channel = runner()->rawData()->channel(
+				m_glibs[iThread]-111, m_glibchans[iThread]);
+		unsigned int size = m_waveforms[iThread]->size();
 		for (unsigned int i=0; i<size; i++) {
-			channel->signals()->push_back(m_waveform->at(i));
+			channel->signals()->push_back(m_waveforms[iThread]->at(i));
 			channel->times()->push_back(i);
 		}
 		channel->setNEntries(channel->times()->size());
-
-		if (m_firstTime) m_firstTime = false;
-		unsigned int channelIndex = (m_glib-111)*runner()->geometry()->nChannels() + m_glibchan;
-		if (channelIndex > channelIndexUpper) break;
+		if (m_treePos[iThread] >= m_trees[iThread]->GetEntries()) m_eof = true;
 	}
 }
 
@@ -109,7 +140,7 @@ void SafEventBuilder::monteCarlo()
 				channel->signals()->push_back(signal);
 				plot(signal, "SafEventBuilder/allSignals", "allSignals", 100, 7000, 9000);
 			}
-			channel->setNEntries(runner()->eventTimeWindow());
+			channel->addNEntries(runner()->eventTimeWindow());
 		}
 	}
 }

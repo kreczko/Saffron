@@ -54,16 +54,6 @@ double SafRawDataSet::ithSignal(unsigned int iglib, unsigned int ichan, unsigned
 		return channel(iglib, ichan)->signals()->at(i);
 }
 
-int SafRawDataSet::ithTriggerTime(unsigned int iglib, unsigned int ichan, unsigned int i)
-{
-	return channel(iglib, ichan)->triggerTimes()->at(i);
-}
-
-double SafRawDataSet::ithTriggerValue(unsigned int iglib, unsigned int ichan, unsigned int i)
-{
-		return channel(iglib, ichan)->triggerValues()->at(i);
-}
-
 unsigned int SafRawDataSet::ithNEntries(unsigned int iglib, unsigned int ichan)
 {
 		return m_channels[iglib][ichan]->nEntries();

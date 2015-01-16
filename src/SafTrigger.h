@@ -11,6 +11,7 @@
 #include "SafAlgorithm.h"
 #include "SafRunner.h"
 #include "SafRawDataChannel.h"
+#include "SafTriggerDataSet.h"
 #include <thread>
 
 class SafRawDataChannel;
@@ -27,6 +28,7 @@ private:
   unsigned int m_nTriggers;
   bool m_caching;
   std::vector<TH1F*> * h_triggerValues;
+  void postExecute();
   
 
 public:

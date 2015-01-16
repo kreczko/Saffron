@@ -18,15 +18,15 @@ private:
 	// Members __________________________________________________________________
 
 	std::vector<TH1F*> * h_firstEventPeaks;
-	std::vector<TH1F*> * h_triggerValues;
+	std::vector<TH1F*> * h_valuesPerChannel;
 	TH1F * h_dipValues;
 	TH1F * h_peakValues;
-	TH1F * h_allTriggerValues;
+	TH1F * h_values;
 	TH2F * h_dipVsPeakValues;
-	TH2F * h_dipVsTriggerValues;
-	TH2F * h_peakVsTriggerValues;
+	TH2F * h_dipVsValues;
+	TH2F * h_peakVsValues;
 	TH1F * h_nTriggers;
-	TH2F* h_allTriggers;
+	TH2F * h_valuesVsChannel;
 
 public:
   // Methods __________________________________________________________________

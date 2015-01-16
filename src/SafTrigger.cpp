@@ -15,7 +15,7 @@ SafTrigger::SafTrigger(SafRunner * runner) :
   m_triggerWindowSizeA(16),
   m_triggerWindowSizeB(8),
   m_triggerWindowSizeC(8),
-  m_triggerValueCut(100),
+  m_triggerValueCut(60),
   m_nTriggers(0),
   m_caching(true)
 {
@@ -35,6 +35,7 @@ SafTrigger::~SafTrigger()
 
 void SafTrigger::initialize()
 {
+	if (!runner()->triggerData()) new SafTriggerDataSet(runner());
 	m_threading = true;
 
 	h_triggerValues = initPerChannelPlots("FirstEventTriggerValues", "FirstEventTriggerValues", 
@@ -62,7 +63,6 @@ void SafTrigger::threadExecute(unsigned int iGlib, unsigned int iChannelLow,
 }
 
 
-
 //_____________________________________________________________________________
 
 void SafTrigger::execute()
@@ -70,6 +70,15 @@ void SafTrigger::execute()
 	for (unsigned int i=0; i<runner()->geometry()->nGlibs(); i++){
 		threadExecute(i, 0, runner()->geometry()->nChannels(), -1);
 	}
+}
+
+
+//_____________________________________________________________________________
+
+void SafTrigger::postExecute()
+{
+	// Sorting.
+
 }
 
 
@@ -105,11 +114,21 @@ void SafTrigger::scanChannel(SafRawDataChannel * channel)
 	  if (event() == 0) h_triggerValues->at(plotIndex)->SetBinContent(i, triggerValue);
 		
 		if (triggerValue > m_triggerValueCut && !triggered) {
-			channel->triggerTimes()->push_back(times->at(i));
-			channel->triggerValues()->push_back(triggerValue);
-			channel->triggerDipValues()->push_back(triggerDipValue);
-			channel->triggerPeakValues()->push_back(triggerPeakValue);
-			channel->triggerBaseLines()->push_back(triggerBaseLine);
+			std::vector<double>::iterator iSigMax = std::max_element(
+					signals->begin() + i, signals->begin()+i+m_triggerWindowSizeTotal);
+			double val = (*iSigMax) + (*(iSigMax-1)) + (*(iSigMax+1)) - 3*triggerBaseLine;
+			double time = times->at(i);
+			//std::cout<<val<<std::endl;
+
+			m_mtx.lock();
+			runner()->triggerData()->times()->push_back(time);
+			runner()->triggerData()->channels()->push_back(channel);
+			runner()->triggerData()->values()->push_back(val);
+			runner()->triggerData()->dipValues()->push_back(triggerDipValue);
+			runner()->triggerData()->peakValues()->push_back(triggerPeakValue);
+			runner()->triggerData()->baseLines()->push_back(triggerBaseLine);
+			m_nTriggers++;
+			m_mtx.unlock();
 			nTriggers++;
 			triggered = true;
 		}
@@ -117,7 +136,7 @@ void SafTrigger::scanChannel(SafRawDataChannel * channel)
 
 	}
 
-	channel->setNTriggers(channel->triggerTimes()->size());
+	channel->addNTriggers(channel->nTriggers() + nTriggers);
 }
 
 
@@ -176,7 +195,7 @@ void SafTrigger::evalTimeWindow(std::vector<double> * signals,
 
 void SafTrigger::finalize()
 {
-	//std::cout<<"nTriggers:\t"<<m_nTriggers<<std::endl;
+	std::cout<<"nTriggers:\t"<<m_nTriggers<<std::endl;
 
 	for (unsigned int i=0; i<h_triggerValues->size(); i++) {
 		int iGlib = i/runner()->geometry()->nChannels();

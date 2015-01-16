@@ -11,9 +11,9 @@
 
 SafAlgorithm::SafAlgorithm(SafRunner * runner, std::string name) :
   m_eof(false),
-  m_nThreadsPerGlib(1),
+  m_nThreadsPerGlib(2),
   m_threading(false),
-  m_forceSingleThread(true)
+  m_forceSingleThread(false)
 {
 	std::mutex m_mtx;
   m_runner = runner;
@@ -43,8 +43,10 @@ void SafAlgorithm::parentExecute()
 	struct timeval  tv1, tv2;
 	gettimeofday(&tv1, NULL);
 	
+	preExecute();
   if (m_threading && !m_forceSingleThread) parentThreadExecute();
 	else  execute();
+  postExecute();
 	m_event++;
 	
 	gettimeofday(&tv2, NULL);

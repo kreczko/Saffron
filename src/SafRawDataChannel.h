@@ -29,11 +29,8 @@ private:
 	unsigned int m_channelID;
 	std::vector<int> m_times;
 	std::vector<double> m_signals;
-	std::vector<int> m_triggerTimes;
-	std::vector<double> m_triggerValues;
-	std::vector<double> m_triggerDipValues;
-	std::vector<double> m_triggerPeakValues;
-	std::vector<double> m_triggerBaseLines;
+	unsigned int m_nEntriesTotal;
+	unsigned int m_nTriggersTotal;
 
 
 public:
@@ -48,16 +45,25 @@ public:
 	unsigned int glibID() {return m_glibID;}
   unsigned int nEntries() {return m_nEntries;}
   unsigned int nTriggers() {return m_nTriggers;}
-  void setNEntries(unsigned int n) {m_nEntries = n;}
-  void setNTriggers(unsigned int n) {m_nTriggers = n;}
+  void addNEntries(unsigned int n) {
+  	m_nEntries += n;
+    m_nEntriesTotal += n;
+  }
+
+  void setNEntries(unsigned int n) {
+  	m_nEntries = n;
+  }
+
+  void addNTriggers(unsigned int n) {
+  	m_nTriggers += n;
+    m_nTriggersTotal += n;
+  }
 	unsigned int channelID() {return m_channelID;}
 	std::vector<int> * times() {return &m_times;}
 	std::vector<double> * signals() {return &m_signals;}
-	std::vector<int> * triggerTimes() {return &m_triggerTimes;}
-	std::vector<double> * triggerValues() {return &m_triggerValues;}
-	std::vector<double> * triggerDipValues() {return &m_triggerDipValues;}
-	std::vector<double> * triggerPeakValues() {return &m_triggerPeakValues;}
-	std::vector<double> * triggerBaseLines() {return &m_triggerBaseLines;}
+	unsigned int plotIndex();
+	unsigned int nEntriesTotal() {return m_nEntriesTotal;}
+	unsigned int nTriggersTotal() {return m_nTriggersTotal;}
 };
 
 #endif /* SAFRAWDATACHANNEL_H_ */

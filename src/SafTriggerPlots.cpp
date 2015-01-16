@@ -33,25 +33,25 @@ void SafTriggerPlots::initialize()
 	unsigned int nG = runner()->geometry()->nGlibs();
 	unsigned int nC = runner()->geometry()->nChannels();
 	
-	h_allTriggerValues = new TH1F("TriggerValues", "TriggerValues", 500, 0, 6000);
+	h_values = new TH1F("TriggerValues", "TriggerValues", 500, 0, 10000);
 	h_dipValues = new TH1F("DipValues", "DipValues", 500, -1000, 2500);
 	h_peakValues = new TH1F("PeakValues", "PeakValues", 500, -1000, 2500);
 	h_dipVsPeakValues = new TH2F("PeakVsDipValues", "PeakVsDipValues", 500, -1000, 
 			2500, 500, -1000, 2500);
-	h_dipVsTriggerValues = new TH2F("DipVsTriggerValues", "DipVsTriggerValues", 500, -1000, 
+	h_dipVsValues = new TH2F("DipVsTriggerValues", "DipVsTriggerValues", 500, -1000,
 			2500, 500, -1000, 2500);
-	h_peakVsTriggerValues = new TH2F("PeakVsTriggerValues", "PeakVsTriggerValues", 500, -1000, 
+	h_peakVsValues = new TH2F("PeakVsTriggerValues", "PeakVsTriggerValues", 500, -1000,
 			2500, 500, -1000, 2500);
 	
   h_firstEventPeaks = initPerChannelPlots("FirstEventPeaks", "FirstEventPeaks", 
 		runner()->eventTimeWindow(), 0.0, runner()->eventTimeWindow());
-	h_triggerValues = initPerChannelPlots("TriggerValues", "TriggerValues", 500, 100, 2500);
+	h_valuesPerChannel = initPerChannelPlots("TriggerValues", "TriggerValues", 500, 100, 10000);
 	
 	h_nTriggers = new TH1F("AverageTriggerRate", "AverageTriggerRate", nC*nG, 
 			0, nC*nG);
 
 	int nChannels =  nC*nG; 
-	h_allTriggers = new TH2F("AllTriggerDist", "AllTriggerDist", nChannels, -0.5, nChannels-0.5, 500, 100, 2500);
+	h_valuesVsChannel = new TH2F("AllTriggerDist", "AllTriggerDist", nChannels, -0.5, nChannels-0.5, 500, 100, 2500);
 
 
 	// Root file directories.
@@ -82,39 +82,24 @@ void SafTriggerPlots::execute()
 
 void SafTriggerPlots::fill()
 {
-	unsigned int nGlibs = runner()->geometry()->nGlibs();
-	unsigned int nChannels = runner()->geometry()->nChannels();
-	SafRawDataChannel * channel;
-	unsigned int plotIndex;
+	SafTriggerDataSet * data = runner()->triggerData();
+	for (unsigned int i=0; i<data->nTriggers(); i++) {
+		unsigned int plotIndex = data->channels()->at(i)->plotIndex();
+		h_values->Fill(data->values()->at(i));
+		h_dipValues->Fill(data->dipValues()->at(i));
+		h_peakValues->Fill(data->peakValues()->at(i));
 
-	for (unsigned int i=0; i<nGlibs; i++) {
-		for (unsigned int j=0; j<nChannels; j++) {
-			channel = runner()->rawData()->channel(i, j);
-			plotIndex = i*nChannels + j;
+		h_dipVsPeakValues->Fill(data->dipValues()->at(i),
+				data->peakValues()->at(i));
+		h_dipVsValues->Fill(data->dipValues()->at(i),
+				data->values()->at(i));
+		h_peakVsValues->Fill(data->peakValues()->at(i),
+				data->values()->at(i));
 
-			for (unsigned int k=0; k<channel->nTriggers(); k++) {
-				// Global plots.
-				h_allTriggerValues->Fill(channel->triggerValues()->at(k));
-				h_dipValues->Fill(channel->triggerDipValues()->at(k));
-				h_peakValues->Fill(channel->triggerPeakValues()->at(k));
-				h_dipVsPeakValues->Fill(channel->triggerDipValues()->at(k), 
-						channel->triggerPeakValues()->at(k));
-				h_dipVsTriggerValues->Fill(channel->triggerDipValues()->at(k), 
-						channel->triggerValues()->at(k));
-				h_peakVsTriggerValues->Fill(channel->triggerPeakValues()->at(k), 
-						channel->triggerValues()->at(k));
-				
-				
-				// Peaks.
-				if (runner()->event() == 0) {
-					h_firstEventPeaks->at(plotIndex)->Fill(
-							channel->triggerTimes()->at(k), channel->triggerValues()->at(k));
-				}
-
-				// Trigger value dists.
-			  h_triggerValues->at(plotIndex)->Fill(channel->triggerValues()->at(k));
-			}
-		}
+		h_valuesPerChannel->at(plotIndex)->Fill(data->values()->at(i));
+		h_valuesVsChannel->Fill(plotIndex, data->values()->at(i));
+		if (runner()->event() == 0)
+			h_firstEventPeaks->at(plotIndex)->Fill(data->times()->at(i), data->values()->at(i));
 	}
 }
 
@@ -131,12 +116,12 @@ void SafTriggerPlots::finalize()
 		h_firstEventPeaks->at(i)->Write();
 	}
 
-	for (unsigned int i=0; i<h_triggerValues->size(); i++) {
+	for (unsigned int i=0; i<h_valuesPerChannel->size(); i++) {
 		int iGlib = i/runner()->geometry()->nChannels();
 		std::stringstream ssGlib; ssGlib << iGlib;
 		runner()->saveFile()->cd((name() + "/TriggerValues/Glib" + ssGlib.str()).c_str());
 
-		h_triggerValues->at(i)->Write();
+		h_valuesPerChannel->at(i)->Write();
 	}
 	
 	unsigned int nGlibs = runner()->geometry()->nGlibs();
@@ -146,13 +131,14 @@ void SafTriggerPlots::finalize()
 		for (unsigned int j=0; j<nChannels; j++) {
 			SafRawDataChannel * channel = runner()->rawData()->channel(i, j);
 			h_nTriggers->SetBinContent(i*runner()->geometry()->nChannels() + j, 
-					channel->nTriggers()/(1.*runner()->nEvents()));
+					channel->nTriggersTotal()/(1.*runner()->nEvents()));
+			//std::cout<<channel->nTriggers()<<std::endl;
 		}
 	}
 
-	for (unsigned int i=0; i<h_triggerValues->size(); i++){
-		for (unsigned int j=0; j<h_triggerValues->at(i)->GetNbinsX(); j++) {
-			h_allTriggers->SetBinContent(i, j, h_triggerValues->at(i)->GetBinContent(j));	
+	for (unsigned int i=0; i<h_valuesPerChannel->size(); i++){
+		for (unsigned int j=0; j<h_valuesPerChannel->at(i)->GetNbinsX(); j++) {
+			h_valuesVsChannel->SetBinContent(i, j, h_valuesPerChannel->at(i)->GetBinContent(j));
 		}
 	}
 
@@ -160,12 +146,12 @@ void SafTriggerPlots::finalize()
 	runner()->saveFile()->cd(name().c_str());
 	h_dipValues->Write();
 	h_peakValues->Write();
-	h_allTriggerValues->Write();
+	h_values->Write();
 	h_dipVsPeakValues->Write();
-	h_dipVsTriggerValues->Write();
-	h_peakVsTriggerValues->Write();
+	h_dipVsValues->Write();
+	h_peakVsValues->Write();
 	h_nTriggers->Write();
-	h_allTriggers->Write(); 
+	h_valuesVsChannel->Write();
 }
 
 

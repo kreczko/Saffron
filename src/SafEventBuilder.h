@@ -14,6 +14,9 @@
 #include "TFile.h"
 
 
+class SafRawDataChannel;
+
+
 class SafEventBuilder: public SafAlgorithm
 {
 private:
@@ -21,11 +24,21 @@ private:
 	TRandom3 * m_randGen;
 	double m_mean; //MC mode.
 	double m_rms; //MC mode.
-	unsigned int m_treePos;
-	TTree * m_tree;
-  int m_glib, m_glibchan, m_trigger, m_layer, m_chanx, m_chany;
-	std::vector<int> * m_waveform;
+	std::vector<unsigned int> m_treePos;
+	std::vector<TTree*> m_trees;
+	std::vector<TFile*> m_files;
+	std::vector<std::string> m_fileNames; // one per thread.
+	std::vector<int> m_glibs;
+	std::vector<int> m_glibchans;
+	std::vector<int> m_triggers;
+	std::vector<int> m_layers;
+	std::vector<int> m_chanxs;
+	std::vector<int> m_chanys;
+	std::vector< std::vector<int>* > m_waveforms;
+	std::vector<int> * m_spareWaveform;
 	bool m_firstTime;
+	unsigned int m_nFileThreads;
+
 
 
 public:
@@ -38,9 +51,10 @@ public:
 	void finalize();
 
 	void monteCarlo();
+	void threadFill(SafRawDataChannel * channel, std::vector<int> * waveform);
 	void realData(unsigned int channelIndexUpper);
-	TTree * tree() {return m_tree;}
-	unsigned int treePos() {return m_treePos;}
+	TTree * tree() {return m_trees.back();}
+	unsigned int treePos() {return m_treePos.back();}
 };
 
 #endif /* SAFEVENTBUILDER_H_ */

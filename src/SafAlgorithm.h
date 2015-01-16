@@ -30,17 +30,18 @@ private:
 	// Members __________________________________________________________________
 	std::string m_childClassName; // Set by constructor of child.
 	SafRunner * m_runner; // Pointer to the runner, set by constructor of child.
-	bool m_eof; // Flag to show if read all data.
+
   std::vector< TH1F* > h_th1sSLOW; // Slow performance.
 	std::vector< TH2F* > h_th2sSLOW; // Slow performance.
 	unsigned long long m_totalTime;
 	double m_avTime;
-	std::mutex m_mtx;
 	unsigned int m_nGlibs;
 	unsigned int m_nChannels;
 
 
 public:
+	bool m_eof; // Flag to show if read all data.
+  std::mutex m_mtx;
 	unsigned int m_nThreadsPerGlib;
 	bool m_threading;
 	unsigned int m_nChannelsPerThread;
@@ -52,7 +53,9 @@ public:
 	virtual ~SafAlgorithm();
 
 	virtual void initialize() {std::cout<<"Default initilizer."<<std::endl;}
+	virtual void preExecute() {}
 	virtual void execute() {std::cout<<"Default execute."<<std::endl;}
+	virtual void postExecute() {}
 	virtual void finalize() {std::cout<<"Default finalizer."<<std::endl;}
 	virtual void threadExecute(unsigned int iGlib, unsigned int iChannelLow, 
 		unsigned int iChannelUp, int iThread) 

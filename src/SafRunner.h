@@ -13,6 +13,7 @@
 #include "SafEventBuilder.h"
 #include "SafTrigger.h"
 #include "SafRawDataSet.h"
+#include "SafTriggerDataSet.h"
 #include "SafGeometry.h"
 #include <vector>
 #include <iostream>
@@ -22,11 +23,13 @@
 #include "SafTriggerPlots.h"
 #include "SafPeakFitter.h"
 #include "SafFilter.h"
+#include "SafCoincidenceFinder.h"
 
 
 // Forward declarations.
 class SafAlgorithm;
 class SafRawDataSet;
+class SafTriggerDataSet;
 class SafEventBuilder;
 
 
@@ -37,6 +40,7 @@ private:
 	unsigned int m_printThreshold; // Sets the level of print outs.
 	std::vector< SafAlgorithm* > m_algorithms;
 	SafRawDataSet * m_rawData; // Set by the initializer of the event builder.
+	SafTriggerDataSet * m_triggerData;
 
 	// SafPeakSet * m_peaks;
 	unsigned int m_eventTimeWindow; // Units of 16 ns.
@@ -48,6 +52,7 @@ private:
 	TFile * m_saveFile;
 	unsigned int m_printRate;
 	unsigned int m_threadsPerGlib;
+	unsigned int m_triggerSkip;
 
 
 public:
@@ -65,7 +70,9 @@ public:
 		m_printThreshold = printThreshold;}
 
 	SafRawDataSet * rawData() {return m_rawData;}
+	SafTriggerDataSet * triggerData() {return m_triggerData;}
 	void setRawData(SafRawDataSet * rawData) {m_rawData = rawData;}
+	void setTriggerData(SafTriggerDataSet * triggerData) {m_triggerData = triggerData;}
 
 //	SafPeakSet * peaks() {return m_peaks;}
 	SafGeometry * geometry() {return m_geometry;}
@@ -74,6 +81,8 @@ public:
 	unsigned int event() {return m_event;}
 	TFile * saveFile() {return m_saveFile;}
 	unsigned int nEvents() {return m_nEvents;}
+	unsigned int triggerSkip() {return m_triggerSkip;}
+	unsigned int nCnG() {return geometry()->nChannels() * geometry()->nGlibs();}
 };
 
 #endif /* SAFRUNNER_H_ */
