@@ -22,7 +22,7 @@ SafRunner::SafRunner() :
 {
 	// Default algorithm list.
 	m_algorithms.push_back(new SafEventBuilder(this));
-	m_algorithms.push_back(new SafRawPlots(this, false));
+	//m_algorithms.push_back(new SafRawPlots(this, false));
   m_algorithms.push_back(new SafFilter(this));
   m_algorithms.push_back(new SafRawPlots(this, true));
 //	m_algorithms.push_back(new SafTrigger(this));
@@ -34,7 +34,7 @@ SafRunner::SafRunner() :
 	m_geometry = new SafGeometry();
 
 	// Options.
-	m_nEvents = 50;
+	m_nEvents = 4400;
 	m_runMode = 1; // 0 for MC, 1 for real data.
 
 	// Save file.

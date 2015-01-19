@@ -33,7 +33,7 @@ SafEventBuilder::~SafEventBuilder()
 
 void SafEventBuilder::initialize()
 {
-	m_fileNames.push_back("/storage/SOLID/SM1_14Jan2015_2103_run0_scoperun_2.2V_500000event.root");
+	m_fileNames.push_back("/storage/SOLID/SM1_15Jan2015_1907_run0_scoperun_2.6V.root");
 
 	for (unsigned int i=0; i<m_nFileThreads; i++) {
 		m_files.push_back(new TFile(m_fileNames[i].c_str(), "READ"));

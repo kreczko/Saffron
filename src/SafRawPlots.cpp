@@ -13,7 +13,7 @@
 SafRawPlots::SafRawPlots(SafRunner * runner, bool filtered) :
   SafAlgorithm(runner, "SafRawPlots"),
   m_diffBinRange(6),
-  m_nSeekedRoots(4),
+  m_nSeekedRoots(3),
   m_calculateGains(true),
   m_nFinalizeThreads(10)
 {
@@ -123,20 +123,21 @@ void SafRawPlots::execute()
 
 void SafRawPlots::finalize()
 {
-	if (m_calculateGains && m_threading && !m_forceSingleThread) {
-		unsigned int step = h_signals->size()/m_nFinalizeThreads;
-		unsigned int iUp = step;
-		std::vector<std::thread> threads;
-		while (iUp < h_signals->size()) {
-			std::cout<<"Starting thread, with values: "<<iUp-step<<"\t"<<iUp<<std::endl;
-			threads.push_back(std::thread(&SafRawPlots::calculateGains, this, iUp-step, iUp));
-			iUp += step;
-		}
-		for (std::vector<std::thread>::iterator i = threads.begin();
-			i != threads.end(); i++)
-			(*i).join();
-	}
-	else calculateGains(0, h_signals->size());
+//	if (m_calculateGains && m_threading && !m_forceSingleThread) {
+//		unsigned int step = h_signals->size()/m_nFinalizeThreads;
+//		unsigned int iUp = step;
+//		std::vector<std::thread> threads;
+//		while (iUp < h_signals->size()) {
+//			std::cout<<"Starting thread, with values: "<<iUp-step<<"\t"<<iUp<<std::endl;
+//			threads.push_back(std::thread(&SafRawPlots::calculateGains, this, iUp-step, iUp));
+//			iUp += step;
+//		}
+//		for (std::vector<std::thread>::iterator i = threads.begin();
+//			i != threads.end(); i++)
+//			(*i).join();
+	//}
+	//else
+	calculateGains(0, h_signals->size());
 
 	std::string direcName = name();
 	if (m_filtered) direcName += "-Filtered";
@@ -216,11 +217,11 @@ void SafRawPlots::finalize()
 
 void SafRawPlots::calculateGains(unsigned int iLow, unsigned int iUp) {
 	std::vector<TH1F*>::iterator ih;
-	int iPlot = 0;
+	int iPlot = iLow;
 
 	for (ih = (h_signals->begin()+iLow); ih!=(h_signals->begin()+iUp); ih++) {
 		int istart = h_signals->at(iPlot)->GetMaximumBin();
-	  int iend = istart + 500;
+	  int iend = istart + 200;
 		for (int i=istart; i<iend; i++) {
 			double rangeLow = (*ih)->GetBinCenter(i);
 			double rangeHigh = (*ih)->GetBinCenter(i+m_diffBinRange);
@@ -240,10 +241,10 @@ void SafRawPlots::calculateGains(unsigned int iLow, unsigned int iUp) {
 		iPlot++;
 	}
 
-	iPlot = 0;
+	iPlot = iLow;
 	for (ih = (h_signalsDiff->begin()+iLow); ih!=(h_signalsDiff->begin()+iUp); ih++) {
 		int istart = h_signals->at(iPlot)->GetMaximumBin();
-	  int iend = istart + 500;
+	  int iend = istart + 200;
 		for (int i=istart; i<iend; i++) {
 			double rangeLow = (*ih)->GetBinCenter(i);
 			double rangeHigh = (*ih)->GetBinCenter(i+m_diffBinRange);
@@ -263,7 +264,7 @@ void SafRawPlots::calculateGains(unsigned int iLow, unsigned int iUp) {
 		iPlot++;
 	}
 
-	iPlot = 0;
+	iPlot = iLow;
 	for (ih = (h_signalsDoubleDiff->begin()+iLow); ih!=(h_signalsDoubleDiff->begin()+iUp); ih++) {
 		std::vector<double> roots;
 		int istart = h_signals->at(iPlot)->GetMaximumBin();
@@ -273,7 +274,19 @@ void SafRawPlots::calculateGains(unsigned int iLow, unsigned int iUp) {
 					(*ih)->GetBinContent(i+1) > 0 &&
 					(*ih)->GetBinContent(i+2) < 0 &&
 					(*ih)->GetBinContent(i+3) < 0) {
-				roots.push_back((*ih)->GetBinLowEdge(i+2));
+				std::stringstream ss;
+				ss<<i;
+				std::string name = "Fit" + ss.str();
+				m_mtx.lock();
+				TF1 * fit = new TF1(name.c_str(), "pol1", (*ih)->GetBinCenter(i), (*ih)->GetBinCenter(i+4));
+				int fitStatus = (*ih)->Fit(name.c_str(), "RQ");
+				m_mtx.unlock();
+				double root;
+				//if (fitStatus == 0) root = -fit->GetParameter(0)/fit->GetParameter(1);
+				//else
+				root = (*ih)->GetBinLowEdge(i+2);
+				roots.push_back(root);
+				delete fit;
 				if (roots.size() >= m_nSeekedRoots || (i-istart > 300))  {
 					if (roots.size() == m_nSeekedRoots) {
 						std::vector<double> seps;

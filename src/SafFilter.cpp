@@ -28,7 +28,7 @@ SafFilter::~SafFilter()
 
 void SafFilter::initialize()
 {
-  m_threading = false;
+  m_threading = true;
 }
 
 
