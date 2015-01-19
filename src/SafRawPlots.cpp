@@ -123,21 +123,21 @@ void SafRawPlots::execute()
 
 void SafRawPlots::finalize()
 {
-//	if (m_calculateGains && m_threading && !m_forceSingleThread) {
-//		unsigned int step = h_signals->size()/m_nFinalizeThreads;
-//		unsigned int iUp = step;
-//		std::vector<std::thread> threads;
-//		while (iUp < h_signals->size()) {
-//			std::cout<<"Starting thread, with values: "<<iUp-step<<"\t"<<iUp<<std::endl;
-//			threads.push_back(std::thread(&SafRawPlots::calculateGains, this, iUp-step, iUp));
-//			iUp += step;
-//		}
-//		for (std::vector<std::thread>::iterator i = threads.begin();
-//			i != threads.end(); i++)
-//			(*i).join();
-	//}
-	//else
-	calculateGains(0, h_signals->size());
+	if (m_calculateGains && m_threading && !m_forceSingleThread) {
+		unsigned int step = h_signals->size()/m_nFinalizeThreads;
+		unsigned int iUp = step;
+		std::vector<std::thread> threads;
+		while (iUp < h_signals->size()) {
+			std::cout<<"Starting thread, with values: "<<iUp-step<<"\t"<<iUp<<std::endl;
+			threads.push_back(std::thread(&SafRawPlots::calculateGains, this, iUp-step, iUp));
+			iUp += step;
+		}
+		for (std::vector<std::thread>::iterator i = threads.begin();
+			i != threads.end(); i++)
+			(*i).join();
+	}
+	else if (m_calculateGains) calculateGains(0, h_signals->size());
+
 
 	std::string direcName = name();
 	if (m_filtered) direcName += "-Filtered";

@@ -38,7 +38,7 @@ SafRunner::SafRunner() :
 	m_runMode = 1; // 0 for MC, 1 for real data.
 
 	// Save file.
-	m_saveFile = new TFile("Saffron-histos.root", "RECREATE");
+	m_saveFile = new TFile("Saffron-histos-SM1_14Jan2015_2220_run0_scoperun_2.0V_500000event.root", "RECREATE");
 }
 
 
