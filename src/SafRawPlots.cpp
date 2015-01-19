@@ -136,7 +136,7 @@ void SafRawPlots::finalize()
 			i != threads.end(); i++)
 			(*i).join();
 	}
-	else calculateGains(0, h_signals->size());
+	else if (m_calculateGains) calculateGains(0, h_signals->size());
 
 	std::string direcName = name();
 	if (m_filtered) direcName += "-Filtered";
